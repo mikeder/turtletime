@@ -1,8 +1,8 @@
 [package]
-name = "bevy_game" # ToDo
+name = "turtle_game"
 version = "0.1.0"
 publish = false
-authors = ["Niklas Eicker <git@nikl.me>"] # ToDo: you are the author ;)
+authors = ["Niklas Eicker <git@nikl.me>"] # ToDo: you are the author 
 edition = "2021"
 exclude = ["dist", "build", "assets", "credits"]
 
@@ -22,32 +22,11 @@ inherits = "release"
 lto = "thin"
 
 [features]
-dev = [
-    "bevy/bevy_dylib",
-]
+dev = ["bevy/bevy_dylib"]
 
 # Bevy defaults minus audio and some other not needed things
 # see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L31-L54
-default = [
-    "bevy/animation",
-    "bevy/bevy_asset",
-    "bevy/bevy_scene",
-    "bevy/bevy_winit",
-    "bevy/bevy_core_pipeline",
-    "bevy/bevy_pbr",
-    "bevy/bevy_gltf",
-    "bevy/bevy_render",
-    "bevy/bevy_sprite",
-    "bevy/bevy_text",
-    "bevy/bevy_ui",
-    "bevy/png",
-    "bevy/hdr",
-    "bevy/zstd",
-    "bevy/x11",
-    "bevy/ktx2",
-    "bevy/filesystem_watcher",
-    "bevy/tonemapping_luts"
-]
+default = ["bevy/animation", "bevy/bevy_asset", "bevy/bevy_scene", "bevy/bevy_winit", "bevy/bevy_core_pipeline", "bevy/bevy_pbr", "bevy/bevy_gltf", "bevy/bevy_render", "bevy/bevy_sprite", "bevy/bevy_text", "bevy/bevy_ui", "bevy/png", "bevy/hdr", "bevy/zstd", "bevy/x11", "bevy/ktx2", "bevy/filesystem_watcher", "bevy/tonemapping_luts"]
 
 [dependencies]
 bevy = { version = "0.10", default-features = false }
@@ -58,6 +37,7 @@ rand = { version = "0.8.3" }
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.28", default-features = false }
 image = { version = "0.24", default-features = false }
+bevy-inspector-egui = "0.18.3"
 
 [build-dependencies]
 embed-resource = "1.4"

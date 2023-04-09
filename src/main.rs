@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
-use bevy_game::GamePlugin;
 use std::io::Cursor;
+use turtle_game::{GamePlugin, ASPECT_RATIO, MAP_HEIGHT};
 use winit::window::Icon;
 
 fn main() {
@@ -15,8 +15,8 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Bevy game".to_string(), // ToDo
-                resolution: (800., 600.).into(),
+                title: "Turtle Time".to_string(),
+                resolution: (MAP_HEIGHT * ASPECT_RATIO, MAP_HEIGHT).into(),
                 canvas: Some("#bevy".to_owned()),
                 ..default()
             }),
