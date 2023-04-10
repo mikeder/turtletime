@@ -1,9 +1,6 @@
-use bevy::{
-    prelude::*,
-    render::{color, mesh::VertexAttributeValues},
-};
+use bevy::prelude::*;
 
-use crate::{loading::TextureAssets, GameState, ASPECT_RATIO, MAP_HEIGHT, TILE_SIZE};
+use crate::{loading::TextureAssets, GameState, TILE_SIZE};
 
 pub struct GraphicsPlugin;
 

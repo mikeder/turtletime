@@ -10,7 +10,7 @@ use bevy::DefaultPlugins;
 use bevy_ggrs::GGRSPlugin;
 use network::GgrsConfig;
 use std::io::Cursor;
-use turtle_game::{GamePlugin, ASPECT_RATIO, MAP_HEIGHT};
+use turtle_time::{GamePlugin, ASPECT_RATIO, MAP_HEIGHT};
 use winit::window::Icon;
 
 fn main() {
