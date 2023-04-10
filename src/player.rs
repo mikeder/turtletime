@@ -1,7 +1,10 @@
 use crate::actions::Actions;
 use crate::graphics::{CharacterSheet, FrameAnimation};
+use crate::tilemap::TileCollider;
 use crate::GameState;
+use crate::TILE_SIZE;
 use bevy::prelude::*;
+use bevy::sprite::collide_aabb::collide;
 use bevy_inspector_egui::prelude::*;
 
 const STARTING_SPEED: f32 = 150.;
@@ -41,7 +44,7 @@ fn camera_follow(
 
 fn spawn_player(mut commands: Commands, characters: Res<CharacterSheet>) {
     let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
-    sprite.custom_size = Some(Vec2::splat(64.0));
+    sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
     sprite.color = Color::AZURE;
 
     commands
@@ -49,7 +52,7 @@ fn spawn_player(mut commands: Commands, characters: Res<CharacterSheet>) {
             sprite: sprite,
             texture_atlas: characters.handle.clone(),
             transform: Transform {
-                translation: Vec3::new(0., 0., 1.),
+                translation: Vec3::new(TILE_SIZE * 2., TILE_SIZE * -2., 900.),
                 ..Default::default()
             },
             ..Default::default()
@@ -65,13 +68,15 @@ fn spawn_player(mut commands: Commands, characters: Res<CharacterSheet>) {
             active: true,
             just_moved: false,
             exp: 1,
-        });
+        })
+        .insert(Name::new("Player1"));
 }
 
 fn move_player(
     time: Res<Time>,
     actions: Res<Actions>,
     mut player_query: Query<(&mut Player, &mut Transform, &mut TextureAtlasSprite)>,
+    wall_query: Query<&Transform, (With<TileCollider>, Without<Player>)>,
 ) {
     let (mut player, mut transform, mut sprite) = player_query.single_mut();
     player.just_moved = false;
@@ -101,5 +106,41 @@ fn move_player(
     if movement.y != 0. {
         player.just_moved = true;
     }
-    transform.translation += movement;
+
+    let target = transform.translation + Vec3::new(0.0, movement.y, 0.0);
+    if !wall_query
+        .iter()
+        .any(|&transform| wall_collision_check(target, transform.translation))
+    {
+        if movement.y != 0.0 {
+            player.just_moved = true;
+        }
+        transform.translation = target;
+    }
+
+    let target = transform.translation + Vec3::new(movement.x, 0.0, 0.0);
+    if !wall_query
+        .iter()
+        .any(|&transform| wall_collision_check(target, transform.translation))
+    {
+        if movement.x != 0.0 {
+            player.just_moved = true;
+            if movement.x > 0.0 {
+                sprite.flip_x = false;
+            } else {
+                sprite.flip_x = true;
+            }
+        }
+        transform.translation = target;
+    }
+}
+
+fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> bool {
+    let collision = collide(
+        target_player_pos,
+        Vec2::splat(TILE_SIZE * 0.9), // give player small amount of leeway
+        wall_translation,
+        Vec2::splat(TILE_SIZE),
+    );
+    collision.is_some()
 }

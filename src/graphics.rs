@@ -3,7 +3,7 @@ use bevy::{
     render::{color, mesh::VertexAttributeValues},
 };
 
-use crate::{loading::TextureAssets, GameState, ASPECT_RATIO, MAP_HEIGHT};
+use crate::{loading::TextureAssets, GameState, ASPECT_RATIO, MAP_HEIGHT, TILE_SIZE};
 
 pub struct GraphicsPlugin;
 
@@ -34,12 +34,12 @@ impl GraphicsPlugin {
         assets: Res<TextureAssets>,
         mut commands: Commands,
         mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-        mut materials: ResMut<Assets<ColorMaterial>>,
-        mut meshes: ResMut<Assets<Mesh>>,
     ) {
+        commands.spawn(Camera2dBundle::default());
+
         let turtle_atlas = TextureAtlas::from_grid(
             assets.texture_turtle.clone(),
-            Vec2::splat(32.0),
+            Vec2::splat(TILE_SIZE),
             4,
             1,
             None,
@@ -50,39 +50,6 @@ impl GraphicsPlugin {
         commands.insert_resource(CharacterSheet {
             handle: atlas_handle,
             turtle_frames: [0, 1, 2, 3],
-        });
-
-        let map_size = MAP_HEIGHT * ASPECT_RATIO / 2.;
-        let map_border = map_size + 2.0;
-
-        // spawn border
-        commands
-            .spawn(SpriteBundle {
-                sprite: Sprite {
-                    color: color::Color::GOLD,
-                    ..Default::default()
-                },
-                transform: Transform::from_scale(Vec3::splat(map_border)),
-                ..Default::default()
-            })
-            .insert(Border);
-
-        // spawn grass
-        // https://github.com/bevyengine/bevy/issues/399#issuecomment-1015353924
-        let mut mesh = Mesh::from(shape::Quad::default());
-        if let Some(VertexAttributeValues::Float32x2(uvs)) =
-            mesh.attribute_mut(Mesh::ATTRIBUTE_UV_0)
-        {
-            for uv in uvs {
-                uv[0] *= map_size;
-                uv[1] *= map_size;
-            }
-        }
-        commands.spawn(ColorMesh2dBundle {
-            material: materials.add(assets.texture_grass.clone().into()),
-            mesh: meshes.add(mesh).into(),
-            transform: Transform::from_scale(Vec3::splat(map_size)),
-            ..Default::default()
         });
     }
 
