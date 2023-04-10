@@ -6,7 +6,7 @@ use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
 use std::io::Cursor;
-use turtle_game::{GamePlugin, ASPECT_RATIO, MAP_HEIGHT};
+use turtle_time::{GamePlugin, ASPECT_RATIO, MAP_HEIGHT};
 use winit::window::Icon;
 
 fn main() {
