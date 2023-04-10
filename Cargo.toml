@@ -33,6 +33,9 @@ bevy = { version = "0.10", default-features = false }
 bevy_kira_audio = { version = "0.15" }
 bevy_asset_loader = { version = "0.15" }
 rand = { version = "0.8.3" }
+# networking
+bevy_ggrs = { version = "0.12", features = ["wasm-bindgen"] }
+bevy_matchbox = { version = "0.6", features = ["ggrs"] }
 
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.28", default-features = false }

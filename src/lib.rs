@@ -5,6 +5,7 @@ mod debug;
 mod graphics;
 mod loading;
 mod menu;
+mod network;
 mod player;
 mod tilemap;
 
@@ -21,6 +22,7 @@ use bevy::app::App;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use graphics::GraphicsPlugin;
+use network::NetworkPlugin;
 use tilemap::TileMapPlugin;
 
 pub const ASPECT_RATIO: f32 = 16.0 / 9.0;
@@ -53,6 +55,7 @@ impl Plugin for GamePlugin {
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)
             .add_plugin(InternalAudioPlugin)
+            .add_plugin(NetworkPlugin)
             .add_plugin(PlayerPlugin);
 
         #[cfg(debug_assertions)]
