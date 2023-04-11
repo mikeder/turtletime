@@ -3,8 +3,8 @@ use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::network::GGRSConfig;
 use crate::network::{INPUT_DOWN, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
 use crate::tilemap::TileCollider;
-use crate::GameState;
 use crate::TILE_SIZE;
+use crate::{GameState, FPS};
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
 use bevy_ggrs::GGRSSchedule;
@@ -32,27 +32,29 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(move_players.in_schedule(GGRSSchedule))
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
-            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)));
-        // .add_system(camera_follow.in_set(OnUpdate(GameState::Playing)));
+            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
+            .add_system(camera_follow.in_set(OnUpdate(GameState::RoundLocal)));
     }
 }
 
-// fn camera_follow(
-//     player_query: Query<&Transform, With<Player>>,
-//     mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera>)>,
-// ) {
-//     let player_transform = player_query.single();
-//     let mut camera_transform = camera_query.single_mut();
+fn camera_follow(
+    player_query: Query<&Transform, With<Player>>,
+    mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera>)>,
+) {
+    let player_transform = player_query.single();
+    let mut camera_transform = camera_query.single_mut();
 
-//     camera_transform.translation.x = player_transform.translation.x;
-//     camera_transform.translation.y = player_transform.translation.y;
-// }
+    camera_transform.translation.x = player_transform.translation.x;
+    camera_transform.translation.y = player_transform.translation.y;
+}
 
 fn spawn_players(
     mut commands: Commands,
     characters: Res<CharacterSheet>,
     mut rip: ResMut<RollbackIdProvider>,
 ) {
+    commands.spawn(Camera2dBundle::default());
+
     let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
 
@@ -83,32 +85,33 @@ fn spawn_players(
         })
         .insert(Name::new("Player 1"));
 
-    commands
-        .spawn((
-            rip.next(),
-            SpriteSheetBundle {
-                sprite: sprite.clone(),
-                texture_atlas: characters.handle.clone(),
-                transform: Transform {
-                    translation: Vec3::new(TILE_SIZE * 2., TILE_SIZE * -2., 900.),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-        ))
-        .insert(FrameAnimation {
-            timer: Timer::from_seconds(0.2, TimerMode::Repeating),
-            frames: characters.turtle_frames.to_vec(),
-            current_frame: 0,
-        })
-        .insert(Player {
-            handle: 1,
-            speed: STARTING_SPEED,
-            active: true,
-            just_moved: false,
-            exp: 1,
-        })
-        .insert(Name::new("Player 2"));
+    // player 2
+    // commands
+    //     .spawn((
+    //         rip.next(),
+    //         SpriteSheetBundle {
+    //             sprite: sprite.clone(),
+    //             texture_atlas: characters.handle.clone(),
+    //             transform: Transform {
+    //                 translation: Vec3::new(TILE_SIZE * 2., TILE_SIZE * -2., 900.),
+    //                 ..Default::default()
+    //             },
+    //             ..Default::default()
+    //         },
+    //     ))
+    //     .insert(FrameAnimation {
+    //         timer: Timer::from_seconds(0.2, TimerMode::Repeating),
+    //         frames: characters.turtle_frames.to_vec(),
+    //         current_frame: 0,
+    //     })
+    //     .insert(Player {
+    //         handle: 1,
+    //         speed: STARTING_SPEED,
+    //         active: true,
+    //         just_moved: false,
+    //         exp: 1,
+    //     })
+    //     .insert(Name::new("Player 2"));
 }
 
 fn move_players(
@@ -142,7 +145,7 @@ fn move_players(
             return;
         }
 
-        let movement = (direction * player.speed).extend(0.);
+        let movement = (direction * player.speed / FPS as f32).extend(0.);
 
         if movement.x != 0. {
             player.just_moved = true;

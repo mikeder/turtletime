@@ -6,7 +6,6 @@ use crate::{GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION, NUM_PLA
 use bevy::{app::AppExit, prelude::*};
 use bevy_ggrs::Session;
 use ggrs::{PlayerType, SessionBuilder};
-use image::flat::NormalForm;
 
 #[derive(Component)]
 pub struct MainMenuUI;

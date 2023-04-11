@@ -32,8 +32,6 @@ impl GraphicsPlugin {
         mut commands: Commands,
         mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     ) {
-        commands.spawn(Camera2dBundle::default());
-
         let turtle_atlas = TextureAtlas::from_grid(
             assets.texture_turtle.clone(),
             Vec2::splat(TILE_SIZE),
