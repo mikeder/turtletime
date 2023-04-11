@@ -10,11 +10,17 @@ pub struct InternalAudioPlugin;
 impl Plugin for InternalAudioPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(AudioPlugin)
-            .add_system(start_audio.in_schedule(OnEnter(GameState::Playing)))
+            .add_system(start_audio.in_schedule(OnEnter(GameState::RoundOnline)))
+            .add_system(start_audio.in_schedule(OnEnter(GameState::RoundLocal)))
             .add_system(
                 control_flying_sound
                     .after(set_movement_actions)
-                    .in_set(OnUpdate(GameState::Playing)),
+                    .in_set(OnUpdate(GameState::RoundOnline)),
+            )
+            .add_system(
+                control_flying_sound
+                    .after(set_movement_actions)
+                    .in_set(OnUpdate(GameState::RoundLocal)),
             );
     }
 }

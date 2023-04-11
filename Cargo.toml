@@ -36,6 +36,7 @@ rand = { version = "0.8.3" }
 # networking
 bevy_ggrs = { version = "0.12", features = ["wasm-bindgen"] }
 bevy_matchbox = { version = "0.6", features = ["ggrs"] }
+ggrs = "0.9.4"
 
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.28", default-features = false }

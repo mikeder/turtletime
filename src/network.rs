@@ -6,9 +6,9 @@ use bevy_matchbox::MatchboxSocket;
 
 pub struct NetworkPlugin;
 
-pub struct GgrsConfig;
+pub struct GGRSConfig;
 
-impl ggrs::Config for GgrsConfig {
+impl ggrs::Config for GGRSConfig {
     // 4-directions + fire fits easily in a single byte
     type Input = u8;
     type State = u8;
@@ -50,7 +50,7 @@ fn wait_for_players(mut commands: Commands, mut socket: ResMut<MatchboxSocket<Si
     info!("All peers have joined, going in-game");
 
     // create a GGRS P2P session
-    let mut session_builder = ggrs::SessionBuilder::<GgrsConfig>::new()
+    let mut session_builder = ggrs::SessionBuilder::<GGRSConfig>::new()
         .with_num_players(num_players)
         .with_input_delay(2);
 
@@ -61,11 +61,11 @@ fn wait_for_players(mut commands: Commands, mut socket: ResMut<MatchboxSocket<Si
     }
 
     // move the channel out of the socket (required because GGRS takes ownership of it)
-    let socket = socket.take_channel(0).unwrap();
+    let channel = socket.take_channel(0).unwrap();
 
     // start the GGRS session
     let ggrs_session = session_builder
-        .start_p2p_session(socket)
+        .start_p2p_session(channel)
         .expect("failed to start session");
 
     commands.insert_resource(bevy_ggrs::Session::P2PSession(ggrs_session));

@@ -1,24 +1,23 @@
 // disable console on windows for release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod network;
-
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
 use bevy_ggrs::GGRSPlugin;
-use network::GgrsConfig;
 use std::io::Cursor;
-use turtle_time::{GamePlugin, ASPECT_RATIO, MAP_HEIGHT};
+use turtle_time::network::{input, GGRSConfig};
+use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
 use winit::window::Icon;
 
 fn main() {
     let mut app = App::new();
 
-    GGRSPlugin::<GgrsConfig>::new()
-        .with_input_system(network::input)
-        .register_rollback_component::<Transform>() // <-- NEW
+    GGRSPlugin::<GGRSConfig>::new()
+        .with_update_frequency(FPS)
+        .with_input_system(input)
+        .register_rollback_component::<Transform>()
         .build(&mut app);
 
     app.insert_resource(Msaa::Off)

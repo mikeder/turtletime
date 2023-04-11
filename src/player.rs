@@ -1,6 +1,6 @@
 use crate::actions::Actions;
 use crate::graphics::{CharacterSheet, FrameAnimation};
-use crate::network::GgrsConfig;
+use crate::network::GGRSConfig;
 use crate::network::{INPUT_DOWN, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
 use crate::tilemap::TileCollider;
 use crate::GameState;
@@ -30,8 +30,9 @@ pub struct PlayerPlugin;
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_players.in_schedule(OnEnter(GameState::Playing)))
-            .add_system(move_players.in_schedule(GGRSSchedule));
+        app.add_system(move_players.in_schedule(GGRSSchedule))
+            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
+            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)));
         // .add_system(camera_follow.in_set(OnUpdate(GameState::Playing)));
     }
 }
@@ -54,7 +55,6 @@ fn spawn_players(
 ) {
     let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
-    sprite.color = Color::AZURE;
 
     commands
         .spawn((
@@ -112,7 +112,7 @@ fn spawn_players(
 }
 
 fn move_players(
-    inputs: Res<PlayerInputs<GgrsConfig>>,
+    inputs: Res<PlayerInputs<GGRSConfig>>,
     mut player_query: Query<(&mut Player, &mut Transform, &mut TextureAtlasSprite)>,
     wall_query: Query<&Transform, (With<TileCollider>, Without<Player>)>,
 ) {

@@ -21,7 +21,7 @@ pub struct Border;
 
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::load_graphics.in_schedule(OnEnter(GameState::Menu)))
+        app.add_system(Self::load_graphics.in_schedule(OnEnter(GameState::MenuMain)))
             .add_system(Self::frame_animation);
     }
 }

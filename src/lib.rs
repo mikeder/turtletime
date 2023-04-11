@@ -5,7 +5,7 @@ mod debug;
 mod graphics;
 mod loading;
 mod menu;
-mod network;
+pub mod network;
 mod player;
 mod tilemap;
 
@@ -13,8 +13,8 @@ use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::debug::DebugPlugin;
 use crate::loading::LoadingPlugin;
-use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
+use menu::plugin::MenuPlugin;
 
 use ascii::AsciiPlugin;
 use bevy::app::App;
@@ -28,19 +28,37 @@ use tilemap::TileMapPlugin;
 pub const ASPECT_RATIO: f32 = 16.0 / 9.0;
 pub const MAP_HEIGHT: f32 = 768.0;
 pub const TILE_SIZE: f32 = 32.0;
+pub const FPS: usize = 60;
+
+const NUM_PLAYERS: usize = 4;
+const ROLLBACK_SYSTEMS: &str = "rollback_systems";
+const CHECKSUM_UPDATE: &str = "checksum_update";
+const MAX_PREDICTION: usize = 12;
+const INPUT_DELAY: usize = 2;
+const CHECK_DISTANCE: usize = 2;
 
 // This example game uses States to separate logic
 // See https://bevy-cheatbook.github.io/programming/states.html
 // Or https://github.com/bevyengine/bevy/blob/main/examples/ecs/state.rs
 #[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
-enum GameState {
+pub enum GameState {
     // During the loading State the LoadingPlugin will load our assets
     #[default]
     Loading,
-    // During this State the actual game logic is executed
-    Playing,
-    // Here the menu is drawn and waiting for player interaction
-    Menu,
+    // Main menu selection
+    MenuMain,
+    // Online connection menu selection
+    MenuConnect,
+    // Menu for making online rounds
+    MenuOnline,
+    // Menu for making local rounds
+    MenuLocal,
+    // Game logic for online round is executed
+    RoundOnline,
+    // Game logic fo local round is executed
+    RoundLocal,
+    // Win TODO: implement winning
+    Win,
 }
 
 pub struct GamePlugin;

@@ -11,7 +11,7 @@ pub struct LoadingPlugin;
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
         app.add_loading_state(
-            LoadingState::new(GameState::Loading).continue_to_state(GameState::Menu),
+            LoadingState::new(GameState::Loading).continue_to_state(GameState::MenuMain),
         )
         .add_collection_to_loading_state::<_, FontAssets>(GameState::Loading)
         .add_collection_to_loading_state::<_, AudioAssets>(GameState::Loading)
