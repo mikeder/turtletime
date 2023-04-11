@@ -268,13 +268,13 @@ pub fn btn_listeners(
             match btn {
                 MenuOnlineBtn::LobbyMatch => {
                     commands.insert_resource(ConnectData {
-                        lobby_id: format!("bevy{}", lobby_id.0),
+                        lobby_id: format!("turtletime{}", lobby_id.0),
                     });
                     state.set(GameState::MenuConnect);
                 }
                 MenuOnlineBtn::QuickMatch => {
                     commands.insert_resource(ConnectData {
-                        lobby_id: "bevy?next=2".to_owned(),
+                        lobby_id: "turtletime?next=2".to_owned(),
                     });
                     state.set(GameState::MenuConnect);
                 }

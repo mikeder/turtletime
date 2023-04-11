@@ -1,15 +1,16 @@
-use crate::actions::Actions;
 use crate::graphics::{CharacterSheet, FrameAnimation};
+use crate::menu::connect::LocalHandles;
 use crate::network::{GGRSConfig, INPUT_EXIT};
-use crate::network::{INPUT_DOWN, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
+use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
 use crate::tilemap::TileCollider;
-use crate::TILE_SIZE;
+use crate::{FrameCount, TILE_SIZE};
 use crate::{GameState, FPS};
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
-use bevy_ggrs::GGRSSchedule;
 use bevy_ggrs::PlayerInputs;
+use bevy_ggrs::Rollback;
 use bevy_ggrs::RollbackIdProvider;
+use bevy_ggrs::{GGRSSchedule, Session};
 use bevy_inspector_egui::prelude::*;
 
 const STARTING_SPEED: f32 = 150.;
@@ -34,7 +35,7 @@ pub struct PlayerComponent;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            (move_players, exit_to_menu)
+            (move_players, checksum_players, exit_to_menu)
                 .chain()
                 .in_schedule(GGRSSchedule), // Chain systems in GGRSSchedule for determinate access.
         )
@@ -140,6 +141,10 @@ fn exit_to_menu(
 }
 
 fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerComponent>>) {
+    commands.remove_resource::<FrameCount>();
+    commands.remove_resource::<LocalHandles>();
+    commands.remove_resource::<Session<GGRSConfig>>();
+
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
     }
@@ -230,4 +235,37 @@ fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> bool
         Vec2::splat(TILE_SIZE),
     );
     collision.is_some()
+}
+
+#[derive(Default, Reflect, Hash, Component)]
+#[reflect(Hash)]
+pub struct Checksum {
+    value: u16,
+}
+
+pub fn checksum_players(
+    mut query: Query<(&Transform, &mut Checksum), (With<Player>, With<Rollback>)>,
+) {
+    for (t, mut checksum) in query.iter_mut() {
+        let mut bytes = Vec::with_capacity(20);
+        bytes.extend_from_slice(&t.translation.x.to_le_bytes());
+        bytes.extend_from_slice(&t.translation.y.to_le_bytes());
+        bytes.extend_from_slice(&t.translation.z.to_le_bytes());
+
+        // naive checksum implementation
+        checksum.value = fletcher16(&bytes);
+    }
+}
+
+/// Computes the fletcher16 checksum, copied from wikipedia: <https://en.wikipedia.org/wiki/Fletcher%27s_checksum>
+fn fletcher16(data: &[u8]) -> u16 {
+    let mut sum1: u16 = 0;
+    let mut sum2: u16 = 0;
+
+    for byte in data {
+        sum1 = (sum1 + *byte as u16) % 255;
+        sum2 = (sum2 + sum1) % 255;
+    }
+
+    (sum2 << 8) | sum1
 }

@@ -43,41 +43,6 @@ pub fn spawn_ascii_sprite(
         .id()
 }
 
-pub fn spawn_ascii_text(
-    commands: &mut Commands,
-    ascii: &AsciiSheet,
-    to_print: &str,
-    left_center: Vec3,
-) -> Entity {
-    let color = Color::rgb(0.8, 0.8, 0.8);
-
-    let mut character_sprites = Vec::new();
-    for (i, char) in to_print.chars().enumerate() {
-        //https://doc.rust-lang.org/std/primitive.char.html#representation
-        //"char is always 4 bytes", spritesheet only has 256 images
-        assert!(char as usize <= 255);
-        character_sprites.push(spawn_ascii_sprite(
-            commands,
-            ascii,
-            char as usize,
-            color,
-            Vec3::new(i as f32 * TILE_SIZE, 0.0, 0.0),
-            Vec3::splat(1.0),
-        ));
-    }
-    commands
-        .spawn_empty()
-        .insert(Name::new(format!("Text - {}", to_print)))
-        .insert(Transform {
-            translation: left_center,
-            ..Default::default()
-        })
-        .insert(GlobalTransform::default())
-        .insert(AsciiText)
-        .push_children(&character_sprites)
-        .id()
-}
-
 fn load_ascii(
     mut commands: Commands,
     assets: Res<AssetServer>,

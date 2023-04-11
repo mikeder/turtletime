@@ -18,11 +18,9 @@ pub struct TileCollider;
 
 impl Plugin for TileMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::create_simple_map.in_schedule(OnExit(GameState::MenuLocal)))
-            .add_system(Self::create_simple_map.in_schedule(OnExit(GameState::MenuOnline)))
-            .add_system(Self::show_map.in_schedule(OnExit(GameState::MenuMain)))
-            .add_system(Self::hide_map.in_schedule(OnEnter(GameState::MenuLocal)))
-            .add_system(Self::hide_map.in_schedule(OnEnter(GameState::MenuOnline)))
+        app.add_system(Self::spawn_map.in_schedule(OnExit(GameState::Loading)))
+            .add_system(Self::show_map.in_schedule(OnEnter(GameState::RoundLocal)))
+            .add_system(Self::show_map.in_schedule(OnEnter(GameState::RoundOnline)))
             .add_system(Self::hide_map.in_schedule(OnEnter(GameState::MenuMain)));
     }
 }
@@ -54,7 +52,7 @@ impl TileMapPlugin {
         }
     }
 
-    fn create_simple_map(mut commands: Commands, ascii: Res<AsciiSheet>) {
+    fn spawn_map(mut commands: Commands, ascii: Res<AsciiSheet>) {
         let mut tiles = Vec::new();
 
         let map = "

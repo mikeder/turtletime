@@ -6,7 +6,7 @@ mod graphics;
 mod loading;
 mod menu;
 pub mod network;
-mod player;
+pub mod player;
 mod tilemap;
 
 use crate::actions::ActionsPlugin;
@@ -22,17 +22,14 @@ use bevy::app::App;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use graphics::GraphicsPlugin;
-use network::NetworkPlugin;
 use tilemap::TileMapPlugin;
 
 pub const ASPECT_RATIO: f32 = 16.0 / 9.0;
 pub const MAP_HEIGHT: f32 = 768.0;
 pub const TILE_SIZE: f32 = 32.0;
 pub const FPS: usize = 60;
-
+const MATCHBOX_ADDR: &str = "ws://127.0.0.1:3536";
 const NUM_PLAYERS: usize = 4;
-const ROLLBACK_SYSTEMS: &str = "rollback_systems";
-const CHECKSUM_UPDATE: &str = "checksum_update";
 const MAX_PREDICTION: usize = 12;
 const INPUT_DELAY: usize = 2;
 const CHECK_DISTANCE: usize = 2;
@@ -51,8 +48,6 @@ pub enum GameState {
     MenuConnect,
     // Menu for making online rounds
     MenuOnline,
-    // Menu for making local rounds
-    MenuLocal,
     // Game logic for online round is executed
     RoundOnline,
     // Game logic fo local round is executed
@@ -73,7 +68,6 @@ impl Plugin for GamePlugin {
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)
             .add_plugin(InternalAudioPlugin)
-            .add_plugin(NetworkPlugin)
             .add_plugin(PlayerPlugin);
 
         #[cfg(debug_assertions)]
@@ -83,4 +77,14 @@ impl Plugin for GamePlugin {
                 .add_plugin(LogDiagnosticsPlugin::default());
         }
     }
+}
+
+#[derive(Default, Reflect, Hash, Resource)]
+#[reflect(Hash)]
+pub struct FrameCount {
+    pub frame: u32,
+}
+
+pub fn increase_frame_count(mut frame_count: ResMut<FrameCount>) {
+    frame_count.frame += 1;
 }

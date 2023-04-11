@@ -1,14 +1,12 @@
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
 use crate::network::GGRSConfig;
-use crate::{GameState, FPS, INPUT_DELAY, MAX_PREDICTION, NUM_PLAYERS};
+use crate::{GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION, NUM_PLAYERS};
 use bevy::prelude::*;
 use bevy_ggrs::Session;
 use bevy_matchbox::prelude::SingleChannel;
 use bevy_matchbox::MatchboxSocket;
 use ggrs::{PlayerHandle, PlayerType, SessionBuilder};
-
-const MATCHBOX_ADDR: &str = "ws://127.0.0.1:3536";
 
 #[derive(Component)]
 pub struct MenuConnectUI;
@@ -31,6 +29,7 @@ pub struct ConnectData {
 pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectData>) {
     let lobby_id = &connect_data.lobby_id;
     let room_url = format!("{MATCHBOX_ADDR}/{lobby_id}");
+    info!("connecting to matchbox server: {:?}", room_url);
     let socket = MatchboxSocket::new_reliable(room_url);
     commands.insert_resource(socket);
     commands.remove_resource::<ConnectData>();
@@ -48,7 +47,7 @@ pub fn update_matchbox_socket(
     }
 }
 
-// Todo: is this needed?
+// TODO: maybe not needed
 // pub fn cleanup(mut commands: Commands) {
 //     commands.remove_resource::<Option<WebRtcSocket>>();
 // }
@@ -192,9 +191,10 @@ fn create_ggrs_session(
     }
 
     // start the GGRS session
-    let socket = mb_socket.take_channel(0).unwrap();
+    let channel = mb_socket.take_channel(0).unwrap();
+
     let sess = sess_build
-        .start_p2p_session(socket)
+        .start_p2p_session(channel)
         .expect("Session could not be created.");
 
     commands.insert_resource(Session::P2PSession(sess));
