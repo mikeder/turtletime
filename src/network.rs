@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_ggrs::*;
-use bevy_matchbox::matchbox_socket::{PeerId, WebRtcSocket};
+use bevy_matchbox::matchbox_socket::PeerId;
 use bevy_matchbox::prelude::*;
 use bevy_matchbox::MatchboxSocket;
 
@@ -16,12 +16,13 @@ impl ggrs::Config for GGRSConfig {
     type Address = PeerId;
 }
 
-// TODO: use actions input instead
+// TODO: use actions input instead?
 pub const INPUT_UP: u8 = 1 << 0;
 pub const INPUT_DOWN: u8 = 1 << 1;
 pub const INPUT_LEFT: u8 = 1 << 2;
 pub const INPUT_RIGHT: u8 = 1 << 3;
 pub const INPUT_FIRE: u8 = 1 << 4;
+pub const INPUT_EXIT: u8 = 1 << 5;
 
 // This plugin is responsible to control the game audio
 impl Plugin for NetworkPlugin {
@@ -74,6 +75,9 @@ fn wait_for_players(mut commands: Commands, mut socket: ResMut<MatchboxSocket<Si
 pub fn input(_: In<ggrs::PlayerHandle>, keys: Res<Input<KeyCode>>) -> u8 {
     let mut input = 0u8;
 
+    if keys.any_pressed([KeyCode::Escape, KeyCode::Backslash]) {
+        input |= INPUT_EXIT;
+    }
     if keys.any_pressed([KeyCode::Up, KeyCode::W]) {
         input |= INPUT_UP;
     }

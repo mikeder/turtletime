@@ -1,6 +1,6 @@
 use crate::actions::Actions;
 use crate::graphics::{CharacterSheet, FrameAnimation};
-use crate::network::GGRSConfig;
+use crate::network::{GGRSConfig, INPUT_EXIT};
 use crate::network::{INPUT_DOWN, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
 use crate::tilemap::TileCollider;
 use crate::TILE_SIZE;
@@ -26,14 +26,22 @@ pub struct Player {
 
 pub struct PlayerPlugin;
 
+#[derive(Component)]
+pub struct PlayerComponent;
+
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(move_players.in_schedule(GGRSSchedule))
-            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
-            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
-            .add_system(camera_follow.in_set(OnUpdate(GameState::RoundLocal)));
+        app.add_systems(
+            (move_players, exit_to_menu)
+                .chain()
+                .in_schedule(GGRSSchedule), // Chain systems in GGRSSchedule for determinate access.
+        )
+        .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
+        .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
+        .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
+        .add_system(camera_follow.in_set(OnUpdate(GameState::RoundLocal)));
     }
 }
 
@@ -53,7 +61,9 @@ fn spawn_players(
     characters: Res<CharacterSheet>,
     mut rip: ResMut<RollbackIdProvider>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands
+        .spawn(Camera2dBundle::default())
+        .insert(PlayerComponent);
 
     let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
@@ -83,7 +93,8 @@ fn spawn_players(
             just_moved: false,
             exp: 1,
         })
-        .insert(Name::new("Player 1"));
+        .insert(Name::new("Player 1"))
+        .insert(PlayerComponent);
 
     // player 2
     // commands
@@ -112,6 +123,26 @@ fn spawn_players(
     //         exp: 1,
     //     })
     //     .insert(Name::new("Player 2"));
+}
+
+fn exit_to_menu(
+    inputs: Res<PlayerInputs<GGRSConfig>>,
+    mut state: ResMut<NextState<GameState>>,
+    player_query: Query<&mut Player>,
+) {
+    for player in player_query.iter() {
+        let (input, _) = inputs[player.handle];
+
+        if input & INPUT_EXIT != 0 {
+            state.set(GameState::MenuMain);
+        }
+    }
+}
+
+fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerComponent>>) {
+    for e in query.iter() {
+        commands.entity(e).despawn_recursive();
+    }
 }
 
 fn move_players(
