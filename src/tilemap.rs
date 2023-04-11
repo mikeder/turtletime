@@ -18,8 +18,11 @@ pub struct TileCollider;
 
 impl Plugin for TileMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::create_simple_map.in_schedule(OnExit(GameState::Loading)))
+        app.add_system(Self::create_simple_map.in_schedule(OnExit(GameState::MenuLocal)))
+            .add_system(Self::create_simple_map.in_schedule(OnExit(GameState::MenuOnline)))
             .add_system(Self::show_map.in_schedule(OnExit(GameState::MenuMain)))
+            .add_system(Self::hide_map.in_schedule(OnEnter(GameState::MenuLocal)))
+            .add_system(Self::hide_map.in_schedule(OnEnter(GameState::MenuOnline)))
             .add_system(Self::hide_map.in_schedule(OnEnter(GameState::MenuMain)));
     }
 }
@@ -117,6 +120,7 @@ impl TileMapPlugin {
 
         commands
             .spawn(SpriteSheetBundle {
+                visibility: Visibility::Hidden,
                 ..Default::default()
             })
             .insert(Map)
