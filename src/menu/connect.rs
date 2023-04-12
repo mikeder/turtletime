@@ -25,6 +25,8 @@ pub struct ConnectData {
 }
 
 pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectData>) {
+    MATCHBOX_ADDR;
+
     let lobby_id = &connect_data.lobby_id;
     let room_url = format!("{MATCHBOX_ADDR}/{lobby_id}");
     info!("connecting to matchbox server: {:?}", room_url);

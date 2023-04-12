@@ -2,7 +2,7 @@ use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::menu::connect::LocalHandle;
 use crate::network::{GGRSConfig, INPUT_EXIT};
 use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
-use crate::tilemap::{PlayerSpawn, TileCollider};
+use crate::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::{FrameCount, TILE_SIZE};
 use crate::{GameState, FPS};
 use bevy::prelude::*;
@@ -131,6 +131,8 @@ fn exit_to_menu(
         }
     }
 }
+
+fn spawn_strawberries(mut commands: Commands, query: Query<Entity, With<EncounterSpawner>>) {}
 
 fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerComponent>>) {
     commands.remove_resource::<FrameCount>();
