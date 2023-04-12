@@ -1,6 +1,6 @@
 # Turtle Time 🐢
 
-A multiplayer turtle game using [Bevy engine][bevy], [bevy_ggrs]() and [matchbox_server]() for P2P matchmaking/signaling.
+A multiplayer turtle game using [Bevy engine](https://bevyengine.org/), [bevy_ggrs]() and [matchbox_server]() for P2P matchmaking/signaling.
 
 ## Features
 
