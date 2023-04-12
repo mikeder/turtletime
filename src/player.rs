@@ -31,6 +31,12 @@ pub struct PlayerPlugin;
 #[derive(Component)]
 pub struct PlayerComponent;
 
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct EncounterTracker {
+    timer: Timer,
+}
+
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
@@ -100,7 +106,7 @@ fn spawn_players(
                     },
                     ..Default::default()
                 },
-                rip.next(),
+                Rollback::new(rip.next_id()),
             ))
             .insert(FrameAnimation {
                 timer: Timer::from_seconds(0.2, TimerMode::Repeating),
@@ -115,7 +121,10 @@ fn spawn_players(
                 exp: 1,
             })
             .insert(Name::new(name))
-            .insert(PlayerComponent);
+            .insert(PlayerComponent)
+            .insert(EncounterTracker {
+                timer: Timer::from_seconds(10.0, TimerMode::Repeating),
+            });
     }
 }
 
@@ -132,8 +141,6 @@ fn exit_to_menu(
         }
     }
 }
-
-fn spawn_strawberries(mut commands: Commands, query: Query<Entity, With<EncounterSpawner>>) {}
 
 fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerComponent>>) {
     commands.remove_resource::<FrameCount>();
