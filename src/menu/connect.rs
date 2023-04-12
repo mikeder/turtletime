@@ -17,9 +17,7 @@ pub enum MenuConnectBtn {
 }
 
 #[derive(Resource)]
-pub struct LocalHandles {
-    pub handles: Vec<PlayerHandle>,
-}
+pub struct LocalHandle(pub usize);
 
 #[derive(Resource)]
 pub struct ConnectData {
@@ -180,10 +178,9 @@ fn create_ggrs_session(
         .with_input_delay(INPUT_DELAY);
 
     // add players
-    let mut handles = Vec::new();
-    for (i, player_type) in mb_socket.players().iter().enumerate() {
-        if *player_type == PlayerType::Local {
-            handles.push(i);
+    for (i, player_type) in mb_socket.players().into_iter().enumerate() {
+        if player_type == PlayerType::Local {
+            // commands.insert_resource(LocalHandle(i));
         }
         sess_build = sess_build
             .add_player(player_type.clone(), i)
@@ -198,5 +195,4 @@ fn create_ggrs_session(
         .expect("Session could not be created.");
 
     commands.insert_resource(Session::P2PSession(sess));
-    commands.insert_resource(LocalHandles { handles });
 }

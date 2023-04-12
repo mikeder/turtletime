@@ -1,8 +1,8 @@
 use crate::graphics::{CharacterSheet, FrameAnimation};
-use crate::menu::connect::LocalHandles;
+use crate::menu::connect::LocalHandle;
 use crate::network::{GGRSConfig, INPUT_EXIT};
 use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
-use crate::tilemap::TileCollider;
+use crate::tilemap::{PlayerSpawn, TileCollider};
 use crate::{FrameCount, TILE_SIZE};
 use crate::{GameState, FPS};
 use bevy::prelude::*;
@@ -14,6 +14,7 @@ use bevy_ggrs::{GGRSSchedule, Session};
 use bevy_inspector_egui::prelude::*;
 
 const STARTING_SPEED: f32 = 150.;
+const NUM_PLAYERS: usize = 4;
 
 #[derive(Component, Reflect, Default, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]
@@ -47,20 +48,34 @@ impl Plugin for PlayerPlugin {
 }
 
 fn camera_follow(
-    player_query: Query<&Transform, With<Player>>,
+    player_handle: Option<Res<LocalHandle>>,
+    player_query: Query<(&Transform, &Player)>,
     mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera>)>,
 ) {
-    let player_transform = player_query.single();
-    let mut camera_transform = camera_query.single_mut();
+    let player_handle = match player_handle {
+        Some(handle) => handle.0,
+        None => return, // Session hasn't started yet
+    };
 
-    camera_transform.translation.x = player_transform.translation.x;
-    camera_transform.translation.y = player_transform.translation.y;
+    for (player_transform, player) in player_query.iter() {
+        if player.handle != player_handle {
+            continue;
+        }
+
+        let pos = player_transform.translation;
+
+        for mut transform in camera_query.iter_mut() {
+            transform.translation.x = pos.x;
+            transform.translation.y = pos.y;
+        }
+    }
 }
 
 fn spawn_players(
     mut commands: Commands,
     characters: Res<CharacterSheet>,
     mut rip: ResMut<RollbackIdProvider>,
+    spawn_query: Query<&mut PlayerSpawn>,
 ) {
     commands
         .spawn(Camera2dBundle::default())
@@ -69,61 +84,38 @@ fn spawn_players(
     let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
 
-    commands
-        .spawn((
-            rip.next(),
-            SpriteSheetBundle {
-                sprite: sprite.clone(),
-                texture_atlas: characters.handle.clone(),
-                transform: Transform {
-                    translation: Vec3::new(TILE_SIZE * 2., TILE_SIZE * -2., 900.),
+    let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
+
+    for handle in 0..NUM_PLAYERS {
+        let name = format!("Player {}", handle);
+        commands
+            .spawn((
+                SpriteSheetBundle {
+                    sprite: sprite.clone(),
+                    texture_atlas: characters.handle.clone(),
+                    transform: Transform {
+                        translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 900.),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-        ))
-        .insert(FrameAnimation {
-            timer: Timer::from_seconds(0.2, TimerMode::Repeating),
-            frames: characters.turtle_frames.to_vec(),
-            current_frame: 0,
-        })
-        .insert(Player {
-            handle: 0,
-            speed: STARTING_SPEED,
-            active: true,
-            just_moved: false,
-            exp: 1,
-        })
-        .insert(Name::new("Player 1"))
-        .insert(PlayerComponent);
-
-    // player 2
-    // commands
-    //     .spawn((
-    //         rip.next(),
-    //         SpriteSheetBundle {
-    //             sprite: sprite.clone(),
-    //             texture_atlas: characters.handle.clone(),
-    //             transform: Transform {
-    //                 translation: Vec3::new(TILE_SIZE * 2., TILE_SIZE * -2., 900.),
-    //                 ..Default::default()
-    //             },
-    //             ..Default::default()
-    //         },
-    //     ))
-    //     .insert(FrameAnimation {
-    //         timer: Timer::from_seconds(0.2, TimerMode::Repeating),
-    //         frames: characters.turtle_frames.to_vec(),
-    //         current_frame: 0,
-    //     })
-    //     .insert(Player {
-    //         handle: 1,
-    //         speed: STARTING_SPEED,
-    //         active: true,
-    //         just_moved: false,
-    //         exp: 1,
-    //     })
-    //     .insert(Name::new("Player 2"));
+                rip.next(),
+            ))
+            .insert(FrameAnimation {
+                timer: Timer::from_seconds(0.2, TimerMode::Repeating),
+                frames: characters.turtle_frames.to_vec(),
+                current_frame: 0,
+            })
+            .insert(Player {
+                handle,
+                speed: STARTING_SPEED,
+                active: true,
+                just_moved: false,
+                exp: 1,
+            })
+            .insert(Name::new(name))
+            .insert(PlayerComponent);
+    }
 }
 
 fn exit_to_menu(
@@ -142,7 +134,7 @@ fn exit_to_menu(
 
 fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerComponent>>) {
     commands.remove_resource::<FrameCount>();
-    commands.remove_resource::<LocalHandles>();
+    commands.remove_resource::<LocalHandle>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
     for e in query.iter() {

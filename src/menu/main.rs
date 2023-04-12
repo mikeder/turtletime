@@ -1,4 +1,4 @@
-use super::connect::LocalHandles;
+use super::connect::LocalHandle;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::{FontAssets, TextureAssets};
 use crate::network::GGRSConfig;
@@ -213,7 +213,5 @@ fn create_synctest_session(commands: &mut Commands) {
     let sess = sess_build.start_synctest_session().expect("");
 
     commands.insert_resource(Session::SyncTestSession(sess));
-    commands.insert_resource(LocalHandles {
-        handles: (0..NUM_PLAYERS).collect(),
-    });
+    commands.insert_resource(LocalHandle(0));
 }

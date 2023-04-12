@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, transform};
 
 use crate::{
     ascii::{spawn_ascii_sprite, AsciiSheet},
@@ -12,6 +12,11 @@ struct Map;
 
 #[derive(Component)]
 pub struct EncounterSpawner;
+
+#[derive(Component)]
+pub struct PlayerSpawn {
+    pub pos: Vec3,
+}
 
 #[derive(Component)]
 pub struct TileCollider;
@@ -58,7 +63,7 @@ impl TileMapPlugin {
         let map = "
 ==========================================
 |~~~~~~............................~~~~~~|
-|~~~~~~............................~~~~~~|
+|~~^~~~............................~~~^~~|
 |~~~~~~............................~~~~~~|
 |........................................|
 |........................................|
@@ -73,7 +78,7 @@ impl TileMapPlugin {
 |........................................|
 |........................................|
 |~~~~~~............................~~~~~~|
-|~~~~~~............................~~~~~~|
+|~~^~~~............................~~~^~~|
 |~~~~~~............................~~~~~~|
 =========================================="
             .to_string();
@@ -90,14 +95,16 @@ impl TileMapPlugin {
                     '=' => Color::rgb(0.7, 0.7, 0.7), // walls
                     '@' => Color::rgb(0.5, 0.5, 0.2), // npc
                     '~' => Color::rgb(0.2, 0.9, 0.2), // grass
+                    '^' => Color::ALICE_BLUE,         // player spawn
                     _ => Color::rgb(0.9, 0.9, 0.9),
                 };
+                let pos = Vec3::new(x as f32 * TILE_SIZE, -(y as f32) * TILE_SIZE, 0.0);
                 let tile = spawn_ascii_sprite(
                     &mut commands,
                     &ascii,
                     char as usize,
                     color,
-                    Vec3::new(x as f32 * TILE_SIZE, -(y as f32) * TILE_SIZE, 0.0),
+                    pos,
                     Vec3::splat(1.0),
                 );
                 if char == '|' || char == '=' {
@@ -111,6 +118,10 @@ impl TileMapPlugin {
                 if char == '~' {
                     // Grass
                     commands.entity(tile).insert(EncounterSpawner);
+                }
+                if char == '^' {
+                    // Grass
+                    commands.entity(tile).insert(PlayerSpawn { pos });
                 }
                 tiles.push(tile);
             }
