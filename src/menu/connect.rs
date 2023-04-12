@@ -25,8 +25,6 @@ pub struct ConnectData {
 }
 
 pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectData>) {
-    MATCHBOX_ADDR;
-
     let lobby_id = &connect_data.lobby_id;
     let room_url = format!("{MATCHBOX_ADDR}/{lobby_id}");
     info!("connecting to matchbox server: {:?}", room_url);
@@ -182,7 +180,7 @@ fn create_ggrs_session(
     // add players
     for (i, player_type) in mb_socket.players().into_iter().enumerate() {
         if player_type == PlayerType::Local {
-            // commands.insert_resource(LocalHandle(i));
+            commands.insert_resource(LocalHandle(i)); // track local player for camera follow, etc.
         }
         sess_build = sess_build
             .add_player(player_type.clone(), i)

@@ -41,8 +41,9 @@ impl Plugin for PlayerPlugin {
                 .in_schedule(GGRSSchedule), // Chain systems in GGRSSchedule for determinate access.
         )
         .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
-        .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
         .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
+        .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
+        .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
         .add_system(camera_follow.in_set(OnUpdate(GameState::RoundLocal)));
     }
 }
