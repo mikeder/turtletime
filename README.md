@@ -2,6 +2,8 @@
 
 A multiplayer turtle game using [Bevy engine](https://bevyengine.org/), [bevy_ggrs]() and [matchbox_server]() for P2P matchmaking/signaling.
 
+Try it out here: https://mikeder.net/turtletime
+
 ## Features
 
 4 players spawn in a rectangle and can move independently.
