@@ -4,9 +4,11 @@ use crate::network::GGRSConfig;
 use crate::{GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION, NUM_PLAYERS};
 use bevy::prelude::*;
 use bevy_ggrs::Session;
+use bevy_inspector_egui::prelude::ReflectInspectorOptions;
+use bevy_inspector_egui::InspectorOptions;
 use bevy_matchbox::prelude::SingleChannel;
 use bevy_matchbox::MatchboxSocket;
-use ggrs::{PlayerHandle, PlayerType, SessionBuilder};
+use ggrs::{PlayerType, SessionBuilder};
 
 #[derive(Component)]
 pub struct MenuConnectUI;
@@ -16,7 +18,8 @@ pub enum MenuConnectBtn {
     Back,
 }
 
-#[derive(Resource)]
+#[derive(Resource, Reflect, Default, InspectorOptions)]
+#[reflect(Resource, InspectorOptions)]
 pub struct LocalHandle(pub usize);
 
 #[derive(Resource)]
@@ -44,11 +47,6 @@ pub fn update_matchbox_socket(
         state.set(GameState::RoundOnline);
     }
 }
-
-// TODO: maybe not needed
-// pub fn cleanup(mut commands: Commands) {
-//     commands.remove_resource::<Option<WebRtcSocket>>();
-// }
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     // ui camera
@@ -169,6 +167,10 @@ fn create_ggrs_session(
     mut commands: Commands,
     mut mb_socket: ResMut<MatchboxSocket<SingleChannel>>,
 ) {
+    if mb_socket.get_channel(0).is_err() {
+        return; // we've already started
+    }
+
     // create a new ggrs session
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(NUM_PLAYERS)
@@ -180,6 +182,7 @@ fn create_ggrs_session(
     // add players
     for (i, player_type) in mb_socket.players().into_iter().enumerate() {
         if player_type == PlayerType::Local {
+            info!("Adding local player {}", i);
             commands.insert_resource(LocalHandle(i)); // track local player for camera follow, etc.
         }
         sess_build = sess_build

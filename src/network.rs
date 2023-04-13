@@ -24,9 +24,6 @@ pub const INPUT_EXIT: u8 = 1 << 5;
 pub fn input(_: In<ggrs::PlayerHandle>, keys: Res<Input<KeyCode>>) -> u8 {
     let mut input = 0u8;
 
-    if keys.any_pressed([KeyCode::Escape, KeyCode::Backslash]) {
-        input |= INPUT_EXIT;
-    }
     if keys.any_pressed([KeyCode::Up, KeyCode::W]) {
         input |= INPUT_UP;
     }

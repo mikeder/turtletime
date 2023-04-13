@@ -73,19 +73,14 @@ impl Plugin for GamePlugin {
 
         #[cfg(debug_assertions)]
         {
-            app.add_plugin(FrameTimeDiagnosticsPlugin::default())
-                .add_plugin(DebugPlugin)
+            // With FPS
+            // app.add_plugin(FrameTimeDiagnosticsPlugin::default())
+            //     .add_plugin(DebugPlugin)
+            //     .add_plugin(LogDiagnosticsPlugin::default());
+
+            // Without FPS
+            app.add_plugin(DebugPlugin)
                 .add_plugin(LogDiagnosticsPlugin::default());
         }
     }
-}
-
-#[derive(Default, Reflect, Hash, Resource)]
-#[reflect(Hash)]
-pub struct FrameCount {
-    pub frame: u32,
-}
-
-pub fn increase_frame_count(mut frame_count: ResMut<FrameCount>) {
-    frame_count.frame += 1;
 }

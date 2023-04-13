@@ -3,7 +3,7 @@ use crate::menu::connect::LocalHandle;
 use crate::network::{GGRSConfig, INPUT_EXIT};
 use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
 use crate::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
-use crate::{FrameCount, TILE_SIZE};
+use crate::TILE_SIZE;
 use crate::{GameState, FPS};
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
@@ -41,16 +41,14 @@ pub struct EncounterTracker {
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            (move_players, checksum_players, exit_to_menu)
-                .chain()
-                .in_schedule(GGRSSchedule), // Chain systems in GGRSSchedule for determinate access.
-        )
-        .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
-        .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
-        .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
-        .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
-        .add_system(camera_follow.in_set(OnUpdate(GameState::RoundLocal)));
+        app.add_system(move_players.in_schedule(GGRSSchedule))
+            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
+            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
+            .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
+            .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
+            .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
+            .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
+            .add_system(exit_to_menu);
     }
 }
 
@@ -91,6 +89,7 @@ fn spawn_players(
     let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
 
+    // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
     for handle in 0..NUM_PLAYERS {
@@ -128,22 +127,13 @@ fn spawn_players(
     }
 }
 
-fn exit_to_menu(
-    inputs: Res<PlayerInputs<GGRSConfig>>,
-    mut state: ResMut<NextState<GameState>>,
-    player_query: Query<&mut Player>,
-) {
-    for player in player_query.iter() {
-        let (input, _) = inputs[player.handle];
-
-        if input & INPUT_EXIT != 0 {
-            state.set(GameState::MenuMain);
-        }
+fn exit_to_menu(keys: Res<Input<KeyCode>>, mut state: ResMut<NextState<GameState>>) {
+    if keys.any_pressed([KeyCode::Escape, KeyCode::Delete]) {
+        state.set(GameState::MenuMain);
     }
 }
 
 fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerComponent>>) {
-    commands.remove_resource::<FrameCount>();
     commands.remove_resource::<LocalHandle>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
@@ -154,19 +144,20 @@ fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerCompo
 
 fn move_players(
     inputs: Res<PlayerInputs<GGRSConfig>>,
-    mut player_query: Query<(&mut Player, &mut Transform, &mut TextureAtlasSprite)>,
-    wall_query: Query<&Transform, (With<TileCollider>, Without<Player>)>,
+    walls: Query<&Transform, (With<TileCollider>, Without<Player>)>,
+    mut players: Query<(&mut Transform, &mut TextureAtlasSprite, &mut Player), With<Rollback>>,
 ) {
-    for (mut player, mut transform, mut sprite) in player_query.iter_mut() {
-        player.just_moved = false;
+    for (mut transform, mut sprite, mut player) in players.iter_mut() {
+        debug!("inputs: {:?}", **inputs);
 
+        // reset just_moved each frame
+        player.just_moved = false;
         if !player.active {
             return;
         }
 
-        let mut direction = Vec2::ZERO;
         let (input, _) = inputs[player.handle];
-
+        let mut direction = Vec2::ZERO;
         if input & INPUT_UP != 0 {
             direction.y += 1.;
         }
@@ -201,7 +192,7 @@ fn move_players(
         }
 
         let target = transform.translation + Vec3::new(0.0, movement.y, 0.0);
-        if !wall_query
+        if !walls
             .iter()
             .any(|&transform| wall_collision_check(target, transform.translation))
         {
@@ -212,7 +203,7 @@ fn move_players(
         }
 
         let target = transform.translation + Vec3::new(movement.x, 0.0, 0.0);
-        if !wall_query
+        if !walls
             .iter()
             .any(|&transform| wall_collision_check(target, transform.translation))
         {

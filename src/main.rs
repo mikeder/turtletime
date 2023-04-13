@@ -8,8 +8,8 @@ use bevy::DefaultPlugins;
 use bevy_ggrs::GGRSPlugin;
 use std::io::Cursor;
 use turtle_time::network::{input, GGRSConfig};
-use turtle_time::player::Checksum;
-use turtle_time::{FrameCount, GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
+use turtle_time::player::Player;
+use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
 use winit::window::Icon;
 
 fn main() {
@@ -19,8 +19,7 @@ fn main() {
         .with_update_frequency(FPS)
         .with_input_system(input)
         .register_rollback_component::<Transform>()
-        .register_rollback_component::<Checksum>()
-        .register_rollback_resource::<FrameCount>()
+        .register_rollback_component::<Player>()
         .build(&mut app);
 
     app.insert_resource(Msaa::Off)
