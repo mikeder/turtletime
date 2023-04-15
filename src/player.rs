@@ -1,10 +1,10 @@
-use crate::graphics::{CharacterSheet, FrameAnimation};
+use crate::loading::TextureAssets;
 use crate::menu::connect::LocalHandle;
-use crate::network::{GGRSConfig, INPUT_EXIT};
+use crate::network::GGRSConfig;
 use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
-use crate::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
-use crate::TILE_SIZE;
+use crate::tilemap::{PlayerSpawn, TileCollider};
 use crate::{GameState, FPS};
+use crate::{NUM_PLAYERS, TILE_SIZE};
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
 use bevy_ggrs::PlayerInputs;
@@ -12,11 +12,11 @@ use bevy_ggrs::Rollback;
 use bevy_ggrs::RollbackIdProvider;
 use bevy_ggrs::{GGRSSchedule, Session};
 use bevy_inspector_egui::prelude::*;
+use ggrs::InputStatus;
 
 const STARTING_SPEED: f32 = 150.;
-const NUM_PLAYERS: usize = 4;
 
-#[derive(Component, Reflect, Default, InspectorOptions)]
+#[derive(Component, Debug, Reflect, Default, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]
 pub struct Player {
     handle: usize,
@@ -24,6 +24,12 @@ pub struct Player {
     active: bool,
     just_moved: bool,
     pub exp: usize,
+}
+
+#[derive(Resource, Default, Reflect, Hash)]
+#[reflect(Resource, Hash)]
+pub struct FrameCount {
+    pub frame: u32,
 }
 
 pub struct PlayerPlugin;
@@ -41,15 +47,21 @@ pub struct EncounterTracker {
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(move_players.in_schedule(GGRSSchedule))
+        app.init_resource::<FrameCount>()
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
             .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
             .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
-            .add_system(exit_to_menu);
+            .add_system(exit_to_menu)
+            // these systems will be executed as part of the advance frame update
+            .add_systems((move_players, increase_frame_system).in_schedule(GGRSSchedule));
     }
+}
+
+pub fn increase_frame_system(mut frame_count: ResMut<FrameCount>) {
+    frame_count.frame += 1;
 }
 
 fn camera_follow(
@@ -78,7 +90,7 @@ fn camera_follow(
 
 fn spawn_players(
     mut commands: Commands,
-    characters: Res<CharacterSheet>,
+    textures: Res<TextureAssets>,
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
 ) {
@@ -86,44 +98,38 @@ fn spawn_players(
         .spawn(Camera2dBundle::default())
         .insert(PlayerComponent);
 
-    let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
-    sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
-
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
     for handle in 0..NUM_PLAYERS {
         let name = format!("Player {}", handle);
-        commands
-            .spawn((
-                SpriteSheetBundle {
-                    sprite: sprite.clone(),
-                    texture_atlas: characters.handle.clone(),
-                    transform: Transform {
-                        translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 900.),
-                        ..Default::default()
-                    },
+        commands.spawn((
+            EncounterTracker {
+                timer: Timer::from_seconds(10.0, TimerMode::Repeating),
+            },
+            SpriteBundle {
+                sprite: Sprite {
+                    custom_size: Some(Vec2::splat(TILE_SIZE * 2.)),
                     ..Default::default()
                 },
-                Rollback::new(rip.next_id()),
-            ))
-            .insert(FrameAnimation {
-                timer: Timer::from_seconds(0.2, TimerMode::Repeating),
-                frames: characters.turtle_frames.to_vec(),
-                current_frame: 0,
-            })
-            .insert(Player {
+                texture: textures.texture_turtle2.clone(),
+                transform: Transform {
+                    translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 900.),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            Name::new(name),
+            Player {
                 handle,
                 speed: STARTING_SPEED,
                 active: true,
                 just_moved: false,
                 exp: 1,
-            })
-            .insert(Name::new(name))
-            .insert(PlayerComponent)
-            .insert(EncounterTracker {
-                timer: Timer::from_seconds(10.0, TimerMode::Repeating),
-            });
+            },
+            PlayerComponent,
+            Rollback::new(rip.next_id()),
+        ));
     }
 }
 
@@ -145,18 +151,26 @@ fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerCompo
 fn move_players(
     inputs: Res<PlayerInputs<GGRSConfig>>,
     walls: Query<&Transform, (With<TileCollider>, Without<Player>)>,
-    mut players: Query<(&mut Transform, &mut TextureAtlasSprite, &mut Player), With<Rollback>>,
+    mut players: Query<(&mut Transform, &mut Sprite, &mut Player), With<Rollback>>,
 ) {
+    // loop over all players and apply their inputs to movement
+    // do NOT return early because we need to check all players for input/movement
     for (mut transform, mut sprite, mut player) in players.iter_mut() {
-        debug!("inputs: {:?}", **inputs);
-
         // reset just_moved each frame
         player.just_moved = false;
         if !player.active {
-            return;
+            continue; // don't return, we need to check other players for movement
         }
 
-        let (input, _) = inputs[player.handle];
+        let input = match inputs[player.handle].1 {
+            InputStatus::Confirmed => inputs[player.handle].0.input,
+            InputStatus::Predicted => inputs[player.handle].0.input,
+            InputStatus::Disconnected => 0, // disconnected players do nothing
+        };
+        if input == 0 {
+            continue; // don't return, we need to check other players for movement
+        }
+
         let mut direction = Vec2::ZERO;
         if input & INPUT_UP != 0 {
             direction.y += 1.;
@@ -171,7 +185,7 @@ fn move_players(
             direction.x -= 1.;
         }
         if direction == Vec2::ZERO {
-            return;
+            continue; // don't return, we need to check other players for movement
         }
 
         let movement = (direction * player.speed / FPS as f32).extend(0.);
@@ -228,37 +242,4 @@ fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> bool
         Vec2::splat(TILE_SIZE),
     );
     collision.is_some()
-}
-
-#[derive(Default, Reflect, Hash, Component)]
-#[reflect(Hash)]
-pub struct Checksum {
-    value: u16,
-}
-
-pub fn checksum_players(
-    mut query: Query<(&Transform, &mut Checksum), (With<Player>, With<Rollback>)>,
-) {
-    for (t, mut checksum) in query.iter_mut() {
-        let mut bytes = Vec::with_capacity(20);
-        bytes.extend_from_slice(&t.translation.x.to_le_bytes());
-        bytes.extend_from_slice(&t.translation.y.to_le_bytes());
-        bytes.extend_from_slice(&t.translation.z.to_le_bytes());
-
-        // naive checksum implementation
-        checksum.value = fletcher16(&bytes);
-    }
-}
-
-/// Computes the fletcher16 checksum, copied from wikipedia: <https://en.wikipedia.org/wiki/Fletcher%27s_checksum>
-fn fletcher16(data: &[u8]) -> u16 {
-    let mut sum1: u16 = 0;
-    let mut sum2: u16 = 0;
-
-    for byte in data {
-        sum1 = (sum1 + *byte as u16) % 255;
-        sum2 = (sum2 + sum1) % 255;
-    }
-
-    (sum2 << 8) | sum1
 }

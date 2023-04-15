@@ -19,7 +19,7 @@ use menu::plugin::MenuPlugin;
 use ascii::AsciiPlugin;
 use bevy::app::App;
 #[cfg(debug_assertions)]
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
+use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::prelude::*;
 use graphics::GraphicsPlugin;
 use tilemap::TileMapPlugin;
@@ -80,7 +80,9 @@ impl Plugin for GamePlugin {
 
             // Without FPS
             app.add_plugin(DebugPlugin)
-                .add_plugin(LogDiagnosticsPlugin::default());
+                .add_plugin(LogDiagnosticsPlugin::default())
+                .add_system(network::log_ggrs_events.in_set(OnUpdate(GameState::RoundLocal)))
+                .add_system(network::log_ggrs_events.in_set(OnUpdate(GameState::RoundOnline)));
         }
     }
 }

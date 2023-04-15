@@ -2,7 +2,7 @@
 name = "turtle_time"
 version = "0.1.0"
 publish = false
-authors = ["Niklas Eicker <git@nikl.me>"] # ToDo: you are the author 
+authors = ["Niklas Eicker <git@nikl.me>"]        # ToDo: you are the author 
 edition = "2021"
 exclude = ["dist", "build", "assets", "credits"]
 
@@ -21,27 +21,39 @@ codegen-units = 1
 inherits = "release"
 lto = "thin"
 
-[features]
-dev = ["bevy/bevy_dylib"]
-
-# Bevy defaults minus audio and some other not needed things
-# see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L31-L54
-default = ["bevy/animation", "bevy/bevy_asset", "bevy/bevy_scene", "bevy/bevy_winit", "bevy/bevy_core_pipeline", "bevy/bevy_pbr", "bevy/bevy_gltf", "bevy/bevy_render", "bevy/bevy_sprite", "bevy/bevy_text", "bevy/bevy_ui", "bevy/png", "bevy/hdr", "bevy/zstd", "bevy/x11", "bevy/ktx2", "bevy/filesystem_watcher", "bevy/tonemapping_luts"]
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Location", # for getting args from query string
+] }
+serde_qs = "0.12"
+wasm-bindgen = "0.2"
+ggrs = { version = "0.9", features = ["wasm-bindgen"] }
 
 [dependencies]
-bevy = { version = "0.10", default-features = false }
+bevy = { version = "0.10", default-features = false, features = [
+    "bevy_gltf",
+    "bevy_winit",
+    "bevy_render",
+    "bevy_pbr",
+    "bevy_core_pipeline",
+    "bevy_ui",
+    "bevy_text",
+    "bevy_asset",
+    "bevy_sprite",
+    "png",
+    "x11",
+] }
 bevy_kira_audio = { version = "0.15" }
 bevy_asset_loader = { version = "0.15" }
-rand = { version = "0.8.3" }
-# networking
-bevy_ggrs = { version = "0.12", features = ["wasm-bindgen"] }
+bevy_ggrs = { version = "0.12" }
 bevy_matchbox = { version = "0.6", features = ["ggrs"] }
-ggrs = "0.9.4"
-
-# keep the following in sync with Bevy's dependencies
+bevy-inspector-egui = "0.18.3"
+bytemuck = { version = "1.7.3", features = ["derive"] }
+ggrs = { version = "0.9.4" }
+rand = { version = "0.8.3" }
 winit = { version = "0.28", default-features = false }
 image = { version = "0.24", default-features = false }
-bevy-inspector-egui = "0.18.3"
 
 [build-dependencies]
 embed-resource = "1.4"

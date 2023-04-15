@@ -63,14 +63,14 @@ impl TileMapPlugin {
         let map = "
 ==========================================
 |~~~~~~............................~~~~~~|
-|~~^~~~............................~~~^~~|
+|~~!~~~............................~~~!~~|
 |~~~~~~............................~~~~~~|
 |........................................|
 |........................................|
 |........~~~~~~~~~~~~~~~~~~~~~~~~........|
 |........~~~~~~~~~~~~~~~~~~~~~~~~........|
 |........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~@~~~~~~~~~~~~........|
+|........~~~~~~~~~~~$~~~~~~~~~~~~........|
 |........~~~~~~~~~~~~~~~~~~~~~~~~........|
 |........~~~~~~~~~~~~~~~~~~~~~~~~........|
 |........~~~~~~~~~~~~~~~~~~~~~~~~........|
@@ -78,7 +78,7 @@ impl TileMapPlugin {
 |........................................|
 |........................................|
 |~~~~~~............................~~~~~~|
-|~~^~~~............................~~~^~~|
+|~~!~~~............................~~~!~~|
 |~~~~~~............................~~~~~~|
 =========================================="
             .to_string();
@@ -93,25 +93,26 @@ impl TileMapPlugin {
                     '#' => Color::rgb(0.7, 0.7, 0.7), // walls
                     '|' => Color::rgb(0.7, 0.7, 0.7), // walls
                     '=' => Color::rgb(0.7, 0.7, 0.7), // walls
-                    '@' => Color::rgb(0.5, 0.5, 0.2), // npc
+                    '$' => Color::rgb(0.5, 0.5, 0.2), // npc
                     '~' => Color::rgb(0.2, 0.9, 0.2), // grass
-                    '^' => Color::ALICE_BLUE,         // player spawn
+                    '!' => Color::AQUAMARINE,         // player spawn
                     _ => Color::rgb(0.9, 0.9, 0.9),
                 };
-                let pos = Vec3::new(x as f32 * TILE_SIZE, -(y as f32) * TILE_SIZE, 0.0);
+                let translation = Vec3::new(x as f32 * TILE_SIZE, -(y as f32) * TILE_SIZE, 0.0);
+                let scale = Vec3::splat(1.0);
                 let tile = spawn_ascii_sprite(
                     &mut commands,
                     &ascii,
                     char as usize,
                     color,
-                    pos,
-                    Vec3::splat(1.0),
+                    translation,
+                    scale,
                 );
                 if char == '|' || char == '=' {
-                    // walls
+                    // Walls
                     commands.entity(tile).insert(TileCollider);
                 }
-                if char == '@' {
+                if char == '$' {
                     // NPC
                     commands.entity(tile).insert(TileCollider);
                 }
@@ -119,9 +120,11 @@ impl TileMapPlugin {
                     // Grass
                     commands.entity(tile).insert(EncounterSpawner);
                 }
-                if char == '^' {
-                    // Grass
-                    commands.entity(tile).insert(PlayerSpawn { pos });
+                if char == '!' {
+                    // Player Spawn
+                    commands
+                        .entity(tile)
+                        .insert(PlayerSpawn { pos: translation });
                 }
                 tiles.push(tile);
             }

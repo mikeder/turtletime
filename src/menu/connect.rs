@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_ggrs::Session;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
-use bevy_matchbox::prelude::SingleChannel;
+use bevy_matchbox::prelude::{PeerState, SingleChannel};
 use bevy_matchbox::MatchboxSocket;
 use ggrs::{PlayerType, SessionBuilder};
 
@@ -17,6 +17,9 @@ pub struct MenuConnectUI;
 pub enum MenuConnectBtn {
     Back,
 }
+
+#[derive(Component)]
+pub struct LobbyText;
 
 #[derive(Resource, Reflect, Default, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
@@ -36,16 +39,59 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
     commands.remove_resource::<ConnectData>();
 }
 
-pub fn update_matchbox_socket(
-    commands: Commands,
-    mut state: ResMut<NextState<GameState>>,
+pub fn lobby_system(
+    mut commands: Commands,
     mut socket: ResMut<MatchboxSocket<SingleChannel>>,
+    mut state: ResMut<NextState<GameState>>,
+    mut query: Query<&mut Text, With<LobbyText>>,
 ) {
-    socket.update_peers();
-    if socket.players().len() >= NUM_PLAYERS {
-        create_ggrs_session(commands, socket);
-        state.set(GameState::RoundOnline);
+    // regularly call update_peers to update the list of connected peers
+    for (peer, new_state) in socket.update_peers() {
+        // you can also handle the specific dis(connections) as they occur:
+        match new_state {
+            PeerState::Connected => info!("peer {peer:?} connected"),
+            PeerState::Disconnected => info!("peer {peer:?} disconnected"),
+        }
     }
+
+    let connected_peers = socket.connected_peers().count();
+    let remaining = NUM_PLAYERS - (connected_peers + 1);
+    query.single_mut().sections[0].value = format!("Waiting for {remaining} more player(s)",);
+    if remaining > 0 {
+        return;
+    }
+
+    // set final player list
+    let players = socket.players();
+
+    // Create GGRS P2P Session
+    let mut sess_build = SessionBuilder::<GGRSConfig>::new()
+        .with_num_players(NUM_PLAYERS)
+        .with_max_prediction_window(MAX_PREDICTION)
+        .with_fps(FPS)
+        .expect("Invalid FPS")
+        .with_input_delay(INPUT_DELAY);
+
+    for (i, player_type) in players.into_iter().enumerate() {
+        if player_type == PlayerType::Local {
+            info!("Adding local player {}", i);
+            commands.insert_resource(LocalHandle(i));
+        } else {
+            info!("Adding remote player {}", i)
+        }
+        sess_build = sess_build
+            .add_player(player_type.clone(), i)
+            .expect("Invalid player added.");
+    }
+
+    // Start P2P session
+    let channel = socket.take_channel(0).unwrap();
+    let sess = sess_build
+        .start_p2p_session(channel)
+        .expect("Session could not be created.");
+
+    commands.insert_resource(Session::P2PSession(sess));
+    state.set(GameState::RoundOnline);
 }
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
@@ -72,22 +118,24 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         })
         .with_children(|parent| {
             // lobby id display
-            parent.spawn(TextBundle {
-                style: Style {
-                    align_self: AlignSelf::Center,
-                    justify_content: JustifyContent::Center,
-                    ..Default::default()
-                },
-                text: Text::from_section(
-                    "Searching a match...",
-                    TextStyle {
-                        font: font_assets.fira_sans.clone(),
-                        font_size: 32.,
-                        color: BUTTON_TEXT,
+            parent
+                .spawn(TextBundle {
+                    style: Style {
+                        align_self: AlignSelf::Center,
+                        justify_content: JustifyContent::Center,
+                        ..Default::default()
                     },
-                ),
-                ..Default::default()
-            });
+                    text: Text::from_section(
+                        "Searching a match...",
+                        TextStyle {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 32.,
+                            color: BUTTON_TEXT,
+                        },
+                    ),
+                    ..Default::default()
+                })
+                .insert(LobbyText);
 
             // back button
             parent
@@ -161,41 +209,4 @@ pub fn cleanup_ui(query: Query<Entity, With<MenuConnectUI>>, mut commands: Comma
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
     }
-}
-
-fn create_ggrs_session(
-    mut commands: Commands,
-    mut mb_socket: ResMut<MatchboxSocket<SingleChannel>>,
-) {
-    if mb_socket.get_channel(0).is_err() {
-        return; // we've already started
-    }
-
-    // create a new ggrs session
-    let mut sess_build = SessionBuilder::<GGRSConfig>::new()
-        .with_num_players(NUM_PLAYERS)
-        .with_max_prediction_window(MAX_PREDICTION)
-        .with_fps(FPS)
-        .expect("Invalid FPS")
-        .with_input_delay(INPUT_DELAY);
-
-    // add players
-    for (i, player_type) in mb_socket.players().into_iter().enumerate() {
-        if player_type == PlayerType::Local {
-            info!("Adding local player {}", i);
-            commands.insert_resource(LocalHandle(i)); // track local player for camera follow, etc.
-        }
-        sess_build = sess_build
-            .add_player(player_type.clone(), i)
-            .expect("Invalid player added.");
-    }
-
-    // start the GGRS session
-    let channel = mb_socket.take_channel(0).unwrap();
-
-    let sess = sess_build
-        .start_p2p_session(channel)
-        .expect("Session could not be created.");
-
-    commands.insert_resource(Session::P2PSession(sess));
 }

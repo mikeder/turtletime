@@ -40,7 +40,7 @@ impl Plugin for MenuPlugin {
             )
             .add_systems(
                 (
-                    connect::update_matchbox_socket,
+                    connect::lobby_system,
                     connect::btn_visuals,
                     connect::btn_listeners,
                 )

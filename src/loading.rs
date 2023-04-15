@@ -40,6 +40,10 @@ pub struct TextureAssets {
     pub texture_grass: Handle<Image>,
     #[asset(path = "textures/turtle.png")]
     pub texture_turtle: Handle<Image>,
+    #[asset(path = "textures/turtle2.png")]
+    pub texture_turtle2: Handle<Image>,
+    #[asset(path = "textures/poop.png")]
+    pub texture_poop: Handle<Image>,
     #[asset(path = "textures/strawberry.png")]
     pub texture_strawberry: Handle<Image>,
 }
