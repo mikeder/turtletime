@@ -1,5 +1,5 @@
 use super::connect::LocalHandle;
-use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
+use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION};
 use crate::loading::{FontAssets, TextureAssets};
 use crate::network::GGRSConfig;
 use crate::{GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION, NUM_PLAYERS};
@@ -31,7 +31,7 @@ pub fn setup_ui(
             style: Style {
                 position_type: PositionType::Absolute,
                 position: UiRect::all(Val::Px(0.)),
-                flex_direction: FlexDirection::ColumnReverse,
+                flex_direction: FlexDirection::Column,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
                 align_self: AlignSelf::Center,
@@ -45,12 +45,12 @@ pub fn setup_ui(
             // logo
             parent.spawn(ImageBundle {
                 style: Style {
-                    size: Size::new(Val::Px(500.0), Val::Px(139.0)),
+                    size: Size::new(Val::Px(128.0), Val::Px(128.0)),
                     margin: UiRect::all(Val::Px(16.)),
                     padding: UiRect::all(Val::Px(16.)),
                     ..Default::default()
                 },
-                image: image_assets.texture_turtle.clone().into(),
+                image: image_assets.texture_turtle2.clone().into(),
                 ..Default::default()
             });
 
@@ -140,6 +140,18 @@ pub fn setup_ui(
                     });
                 })
                 .insert(MainMenuBtn::Quit);
+
+            parent.spawn(TextBundle {
+                text: Text::from_section(
+                    VERSION,
+                    TextStyle {
+                        font: font_assets.fira_sans.clone(),
+                        font_size: 28.0,
+                        color: BUTTON_TEXT,
+                    },
+                ),
+                ..Default::default()
+            });
         })
         .insert(MainMenuUI);
 }

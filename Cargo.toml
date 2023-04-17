@@ -21,15 +21,14 @@ codegen-units = 1
 inherits = "release"
 lto = "thin"
 
+# WASM requirements
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = { version = "0.3", features = [
-    "Document",
-    "Location", # for getting args from query string
-] }
-serde_qs = "0.12"
-wasm-bindgen = "0.2"
-ggrs = { version = "0.9", features = ["wasm-bindgen"] }
+bevy_ggrs = { version = "0.12", features = ["wasm-bindgen"] }
+js-sys = { version = "0.3" }
+wasm-bindgen = { version = "0.2.84" }
+wasm-bindgen-futures = { version = "0.4.34" }
 
+# Main requirements
 [dependencies]
 bevy = { version = "0.10", default-features = false, features = [
     "bevy_gltf",
@@ -50,7 +49,7 @@ bevy_ggrs = { version = "0.12" }
 bevy_matchbox = { version = "0.6", features = ["ggrs"] }
 bevy-inspector-egui = "0.18.3"
 bytemuck = { version = "1.7.3", features = ["derive"] }
-ggrs = { version = "0.9.4" }
+ggrs = { version = "0.9.4", features = ["sync-send"] }
 rand = { version = "0.8.3" }
 winit = { version = "0.28", default-features = false }
 image = { version = "0.24", default-features = false }

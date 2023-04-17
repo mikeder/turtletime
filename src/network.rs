@@ -5,6 +5,12 @@ use bytemuck::{Pod, Zeroable};
 
 pub struct NetworkPlugin;
 
+impl Plugin for NetworkPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system(increase_frame_system.in_schedule(GGRSSchedule));
+    }
+}
+
 #[derive(Debug)]
 pub struct GGRSConfig;
 impl ggrs::Config for GGRSConfig {
@@ -44,6 +50,9 @@ pub fn input(_: In<ggrs::PlayerHandle>, keys: Res<Input<KeyCode>>) -> PlayerInpu
     if keys.any_pressed([KeyCode::Space, KeyCode::Return]) {
         input |= INPUT_FIRE;
     }
+    if keys.any_pressed([KeyCode::Escape, KeyCode::Delete]) {
+        input |= INPUT_EXIT;
+    }
 
     PlayerInput { input }
 }
@@ -57,4 +66,14 @@ pub fn log_ggrs_events(mut session: ResMut<Session<GGRSConfig>>) {
         }
         _ => (),
     }
+}
+
+#[derive(Resource, Default, Reflect, Hash)]
+#[reflect(Resource, Hash)]
+pub struct FrameCount {
+    pub frame: u32,
+}
+
+pub fn increase_frame_system(mut frame_count: ResMut<FrameCount>) {
+    frame_count.frame += 1;
 }

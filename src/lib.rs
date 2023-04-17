@@ -8,26 +8,26 @@ mod menu;
 pub mod network;
 pub mod player;
 mod tilemap;
-
 use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::debug::DebugPlugin;
 use crate::loading::LoadingPlugin;
 use crate::player::PlayerPlugin;
-use menu::plugin::MenuPlugin;
-
 use ascii::AsciiPlugin;
 use bevy::app::App;
-#[cfg(debug_assertions)]
-use bevy::diagnostic::LogDiagnosticsPlugin;
 use bevy::prelude::*;
 use graphics::GraphicsPlugin;
+use menu::plugin::MenuPlugin;
 use tilemap::TileMapPlugin;
+
+#[cfg(debug_assertions)]
+use bevy::diagnostic::LogDiagnosticsPlugin;
 
 pub const ASPECT_RATIO: f32 = 16.0 / 9.0;
 pub const MAP_HEIGHT: f32 = 768.0;
 pub const TILE_SIZE: f32 = 32.0;
 pub const FPS: usize = 60;
+
 // const MATCHBOX_ADDR: &str = "ws://localhost:3536";
 const MATCHBOX_ADDR: &str = "wss://match.sqweeb.net:443";
 const NUM_PLAYERS: usize = 4;

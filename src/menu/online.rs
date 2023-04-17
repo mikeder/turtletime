@@ -37,7 +37,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             style: Style {
                 position_type: PositionType::Absolute,
                 position: UiRect::all(Val::Px(0.)),
-                flex_direction: FlexDirection::ColumnReverse,
+                flex_direction: FlexDirection::Column,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
                 align_self: AlignSelf::Center,

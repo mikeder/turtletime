@@ -1,13 +1,14 @@
 // disable console on windows for release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
 use bevy_ggrs::GGRSPlugin;
 use std::io::Cursor;
-use turtle_time::network::{input, GGRSConfig};
+use turtle_time::network::{input, FrameCount, GGRSConfig};
 use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
 use winit::window::Icon;
 
@@ -18,19 +19,29 @@ fn main() {
         .with_update_frequency(FPS)
         .with_input_system(input)
         .register_rollback_component::<Transform>()
+        .register_rollback_resource::<FrameCount>()
         .build(&mut app);
 
     app.insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Turtle Time".to_string(),
-                resolution: (MAP_HEIGHT * ASPECT_RATIO, MAP_HEIGHT).into(),
-                canvas: Some("#bevy".to_owned()),
-                ..default()
-            }),
-            ..default()
-        }))
+        .init_resource::<FrameCount>()
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        canvas: Some("#bevy".to_owned()),
+                        fit_canvas_to_parent: true,
+                        title: "Turtle Time".to_string(),
+                        resolution: (MAP_HEIGHT * ASPECT_RATIO, MAP_HEIGHT).into(),
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(LogPlugin {
+                    filter: "info,wgpu_core=warn,wgpu_hal=warn,matchbox_socket=debug".into(),
+                    level: bevy::log::Level::DEBUG,
+                }),
+        )
         .add_plugin(GamePlugin)
         .add_system(set_window_icon.on_startup())
         .run();

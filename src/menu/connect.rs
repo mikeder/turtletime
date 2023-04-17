@@ -35,7 +35,7 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
     let room_url = format!("{MATCHBOX_ADDR}/{lobby_id}");
     info!("connecting to matchbox server: {:?}", room_url);
     let socket = MatchboxSocket::new_reliable(room_url);
-    commands.insert_resource(socket);
+    commands.insert_resource(socket); // TODO: Remove on exit menu?
     commands.remove_resource::<ConnectData>();
 }
 

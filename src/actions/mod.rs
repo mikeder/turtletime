@@ -1,8 +1,6 @@
+use crate::actions::game_control::{get_movement, GameControl};
 use bevy::prelude::*;
 use bevy_ggrs::GGRSSchedule;
-
-use crate::actions::game_control::{get_movement, GameControl};
-use crate::GameState;
 
 mod game_control;
 

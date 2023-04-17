@@ -1,8 +1,8 @@
 use crate::loading::TextureAssets;
 use crate::menu::connect::LocalHandle;
-use crate::network::GGRSConfig;
+use crate::network::{GGRSConfig, INPUT_EXIT};
 use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
-use crate::tilemap::{PlayerSpawn, TileCollider};
+use crate::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::{GameState, FPS};
 use crate::{NUM_PLAYERS, TILE_SIZE};
 use bevy::prelude::*;
@@ -13,8 +13,11 @@ use bevy_ggrs::RollbackIdProvider;
 use bevy_ggrs::{GGRSSchedule, Session};
 use bevy_inspector_egui::prelude::*;
 use ggrs::InputStatus;
+use rand::{thread_rng, Rng};
 
 const STARTING_SPEED: f32 = 150.;
+const STRAWBERRY_SIZE: f32 = 32.0;
+const STRAWBERRY_SPAWN_TIME: f32 = 1.0;
 
 #[derive(Component, Debug, Reflect, Default, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]
@@ -26,42 +29,48 @@ pub struct Player {
     pub exp: usize,
 }
 
-#[derive(Resource, Default, Reflect, Hash)]
-#[reflect(Resource, Hash)]
-pub struct FrameCount {
-    pub frame: u32,
-}
-
 pub struct PlayerPlugin;
 
 #[derive(Component)]
 pub struct PlayerComponent;
 
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+pub struct EdibleSpawnTimer {
+    strawberry_timer: Timer,
+}
+
+impl Default for EdibleSpawnTimer {
+    fn default() -> Self {
+        EdibleSpawnTimer {
+            strawberry_timer: Timer::from_seconds(STRAWBERRY_SPAWN_TIME, TimerMode::Repeating),
+        }
+    }
+}
+
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
-pub struct EncounterTracker {
-    timer: Timer,
-}
+pub struct Strawberry;
 
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<FrameCount>()
+        app.init_resource::<EdibleSpawnTimer>()
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
             .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
             .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
-            .add_system(exit_to_menu)
+            .add_system(tick_edible_timer)
+            .add_system(spawn_strawberry_over_time.run_if(in_state(GameState::RoundLocal)))
+            .add_system(spawn_strawberry_over_time.run_if(in_state(GameState::RoundOnline)))
+            .add_system(player_ate_strawberry_system.run_if(in_state(GameState::RoundLocal)))
+            .add_system(player_ate_strawberry_system.run_if(in_state(GameState::RoundOnline)))
             // these systems will be executed as part of the advance frame update
-            .add_systems((move_players, increase_frame_system).in_schedule(GGRSSchedule));
+            .add_systems((move_players, exit_to_menu).in_schedule(GGRSSchedule));
     }
-}
-
-pub fn increase_frame_system(mut frame_count: ResMut<FrameCount>) {
-    frame_count.frame += 1;
 }
 
 fn camera_follow(
@@ -104,9 +113,6 @@ fn spawn_players(
     for handle in 0..NUM_PLAYERS {
         let name = format!("Player {}", handle);
         commands.spawn((
-            EncounterTracker {
-                timer: Timer::from_seconds(10.0, TimerMode::Repeating),
-            },
             SpriteBundle {
                 sprite: Sprite {
                     custom_size: Some(Vec2::splat(TILE_SIZE * 2.)),
@@ -114,7 +120,7 @@ fn spawn_players(
                 },
                 texture: textures.texture_turtle2.clone(),
                 transform: Transform {
-                    translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 900.),
+                    translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -133,9 +139,17 @@ fn spawn_players(
     }
 }
 
-fn exit_to_menu(keys: Res<Input<KeyCode>>, mut state: ResMut<NextState<GameState>>) {
-    if keys.any_pressed([KeyCode::Escape, KeyCode::Delete]) {
-        state.set(GameState::MenuMain);
+fn exit_to_menu(inputs: Res<PlayerInputs<GGRSConfig>>, mut state: ResMut<NextState<GameState>>) {
+    for (handle, input) in inputs.iter().enumerate() {
+        match input.1 {
+            InputStatus::Confirmed => {
+                if input.0.input == INPUT_EXIT {
+                    info!("Player {} exiting", handle);
+                    state.set(GameState::MenuMain)
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -242,4 +256,53 @@ fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> bool
         Vec2::splat(TILE_SIZE),
     );
     collision.is_some()
+}
+
+fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>, time: Res<Time>) {
+    edible_spawn_timer.strawberry_timer.tick(time.delta());
+}
+
+fn spawn_strawberry_over_time(
+    mut commands: Commands,
+    spawner_query: Query<&Transform, With<EncounterSpawner>>,
+    asset_server: Res<TextureAssets>,
+    timer: Res<EdibleSpawnTimer>,
+) {
+    if timer.strawberry_timer.finished() {
+        let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
+
+        let mut rng = thread_rng();
+        let idx = rng.gen_range(0..spawn_area.len());
+        let pos = spawn_area[idx];
+
+        debug!("Spawning strawberry!");
+        commands.spawn((
+            SpriteBundle {
+                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 0.0),
+                texture: asset_server.texture_strawberry.clone(),
+                ..Default::default()
+            },
+            Strawberry {},
+            PlayerComponent {},
+        ));
+    }
+}
+
+// TODO: add sound
+fn player_ate_strawberry_system(
+    mut commands: Commands,
+    mut player_query: Query<(&Transform, &mut Player)>,
+    strawberry_query: Query<(Entity, &Transform), With<Strawberry>>,
+) {
+    for (pt, mut p) in player_query.iter_mut() {
+        for (s, st) in strawberry_query.iter() {
+            let distance = pt.translation.distance(st.translation);
+
+            if distance < TILE_SIZE / 2.0 + STRAWBERRY_SIZE / 2.0 {
+                info!("Player ate strawberry!");
+                p.speed += 10.0;
+                commands.entity(s).despawn();
+            }
+        }
+    }
 }
