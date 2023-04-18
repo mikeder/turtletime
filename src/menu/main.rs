@@ -1,10 +1,12 @@
 use super::connect::LocalHandle;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION};
 use crate::loading::{FontAssets, TextureAssets};
-use crate::network::GGRSConfig;
+use crate::network::{self, GGRSConfig};
 use crate::{GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION, NUM_PLAYERS};
+use bevy::utils::Uuid;
 use bevy::{app::AppExit, prelude::*};
 use bevy_ggrs::Session;
+use bevy_matchbox::prelude::PeerId;
 use ggrs::{PlayerType, SessionBuilder};
 
 #[derive(Component)]
@@ -50,7 +52,7 @@ pub fn setup_ui(
                     padding: UiRect::all(Val::Px(16.)),
                     ..Default::default()
                 },
-                image: image_assets.texture_turtle2.clone().into(),
+                image: image_assets.texture_turtle_cheeks2.clone().into(),
                 ..Default::default()
             });
 
@@ -216,14 +218,18 @@ fn create_synctest_session(commands: &mut Commands) {
         .with_input_delay(INPUT_DELAY)
         .with_check_distance(CHECK_DISTANCE);
 
+    let mut peer_ids = Vec::new();
     for i in 0..NUM_PLAYERS {
         sess_build = sess_build
             .add_player(PlayerType::Local, i)
             .expect("Could not add local player");
+        peer_ids.push(PeerId(Uuid::new_v4()))
     }
+    let agreed_random = network::new_agreed_random(peer_ids);
 
     let sess = sess_build.start_synctest_session().expect("");
 
     commands.insert_resource(Session::SyncTestSession(sess));
     commands.insert_resource(LocalHandle(0));
+    commands.insert_resource(agreed_random);
 }

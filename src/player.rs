@@ -1,6 +1,6 @@
 use crate::loading::TextureAssets;
 use crate::menu::connect::LocalHandle;
-use crate::network::{GGRSConfig, INPUT_EXIT};
+use crate::network::{AgreedRandom, GGRSConfig, INPUT_EXIT};
 use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
 use crate::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::{GameState, FPS};
@@ -13,11 +13,11 @@ use bevy_ggrs::RollbackIdProvider;
 use bevy_ggrs::{GGRSSchedule, Session};
 use bevy_inspector_egui::prelude::*;
 use ggrs::InputStatus;
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 const STARTING_SPEED: f32 = 150.;
 const STRAWBERRY_SIZE: f32 = 32.0;
-const STRAWBERRY_SPAWN_TIME: f32 = 1.0;
+const STRAWBERRY_SPAWN_TIME: f32 = 2.5;
 
 #[derive(Component, Debug, Reflect, Default, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]
@@ -64,12 +64,14 @@ impl Plugin for PlayerPlugin {
             .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
             .add_system(tick_edible_timer)
-            .add_system(spawn_strawberry_over_time.run_if(in_state(GameState::RoundLocal)))
-            .add_system(spawn_strawberry_over_time.run_if(in_state(GameState::RoundOnline)))
-            .add_system(player_ate_strawberry_system.run_if(in_state(GameState::RoundLocal)))
-            .add_system(player_ate_strawberry_system.run_if(in_state(GameState::RoundOnline)))
+            .add_system(spawn_strawberry_over_time.in_set(OnUpdate(GameState::RoundLocal)))
+            .add_system(spawn_strawberry_over_time.in_set(OnUpdate(GameState::RoundOnline)))
             // these systems will be executed as part of the advance frame update
-            .add_systems((move_players, exit_to_menu).in_schedule(GGRSSchedule));
+            .add_systems(
+                (move_players, player_ate_strawberry_system, exit_to_menu)
+                    .chain()
+                    .in_schedule(GGRSSchedule),
+            );
     }
 }
 
@@ -118,7 +120,7 @@ fn spawn_players(
                     custom_size: Some(Vec2::splat(TILE_SIZE * 2.)),
                     ..Default::default()
                 },
-                texture: textures.texture_turtle2.clone(),
+                texture: textures.texture_turtle_cheeks2.clone(),
                 transform: Transform {
                     translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
                     ..Default::default()
@@ -267,12 +269,12 @@ fn spawn_strawberry_over_time(
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
     asset_server: Res<TextureAssets>,
     timer: Res<EdibleSpawnTimer>,
+    mut agreed_seed: ResMut<AgreedRandom>,
 ) {
     if timer.strawberry_timer.finished() {
         let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
 
-        let mut rng = thread_rng();
-        let idx = rng.gen_range(0..spawn_area.len());
+        let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
         debug!("Spawning strawberry!");
@@ -289,6 +291,8 @@ fn spawn_strawberry_over_time(
 }
 
 // TODO: add sound
+// TODO: build sprint
+// TODO: cap movement at a certain speed
 fn player_ate_strawberry_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Player)>,

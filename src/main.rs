@@ -38,7 +38,7 @@ fn main() {
                     ..default()
                 })
                 .set(LogPlugin {
-                    filter: "info,wgpu_core=warn,wgpu_hal=warn,matchbox_socket=debug".into(),
+                    filter: "info,wgpu_core=warn,wgpu_hal=warn,matchbox_socket=warn".into(),
                     level: bevy::log::Level::DEBUG,
                 }),
         )

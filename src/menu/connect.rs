@@ -1,12 +1,13 @@
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
-use crate::network::GGRSConfig;
+use crate::network::{self, GGRSConfig};
 use crate::{GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION, NUM_PLAYERS};
 use bevy::prelude::*;
+use bevy::utils::Uuid;
 use bevy_ggrs::Session;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
-use bevy_matchbox::prelude::{PeerState, SingleChannel};
+use bevy_matchbox::prelude::{PeerId, PeerState, SingleChannel};
 use bevy_matchbox::MatchboxSocket;
 use ggrs::{PlayerType, SessionBuilder};
 
@@ -64,6 +65,21 @@ pub fn lobby_system(
     // set final player list
     let players = socket.players();
 
+    let mut player_ids = Vec::new();
+    for p in players.clone() {
+        match p {
+            PlayerType::Remote(id) => player_ids.push(id),
+            PlayerType::Spectator(id) => player_ids.push(id),
+            PlayerType::Local => (),
+        }
+    }
+    // if we made it here we should have a local peer ID
+    let local_id = match socket.id() {
+        Some(id) => id,
+        None => PeerId(Uuid::new_v4()), // TODO: something more reliable
+    };
+    player_ids.push(local_id);
+
     // Create GGRS P2P Session
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(NUM_PLAYERS)
@@ -84,6 +100,9 @@ pub fn lobby_system(
             .expect("Invalid player added.");
     }
 
+    // Create agreed random resource
+    let agreed_random = network::new_agreed_random(player_ids);
+
     // Start P2P session
     let channel = socket.take_channel(0).unwrap();
     let sess = sess_build
@@ -91,6 +110,7 @@ pub fn lobby_system(
         .expect("Session could not be created.");
 
     commands.insert_resource(Session::P2PSession(sess));
+    commands.insert_resource(agreed_random);
     state.set(GameState::RoundOnline);
 }
 

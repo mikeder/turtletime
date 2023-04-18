@@ -2,7 +2,7 @@
 name = "turtle_time"
 version = "0.1.0"
 publish = false
-authors = ["Niklas Eicker <git@nikl.me>"]        # ToDo: you are the author 
+authors = ["Mike Eder <mikedernet@gmail.com>"]   # ToDo: you are the author 
 edition = "2021"
 exclude = ["dist", "build", "assets", "credits"]
 
@@ -51,6 +51,8 @@ bevy-inspector-egui = "0.18.3"
 bytemuck = { version = "1.7.3", features = ["derive"] }
 ggrs = { version = "0.9.4", features = ["sync-send"] }
 rand = { version = "0.8.3" }
+rand_seeder = { version = "0.2.3" }
+rand_pcg = { version = "*" }
 winit = { version = "0.28", default-features = false }
 image = { version = "0.24", default-features = false }
 
