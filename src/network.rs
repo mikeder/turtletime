@@ -31,11 +31,10 @@ pub fn new_agreed_random(peers: Vec<PeerId>) -> AgreedRandom {
     tmp.sort();
     let seed = tmp.iter().fold(String::new(), |mut a, b| {
         a.reserve(b.0.to_string().len() + 1);
-        a.push_str(" ");
         a.push_str(b.0.to_string().as_str());
-        a
+        a.push_str(" ");
+        a.trim_end().to_string()
     });
-    warn!("Computed Seed: {:?}", seed);
     let rng: StdRng = Seeder::from(seed).make_rng();
 
     AgreedRandom { rng }
