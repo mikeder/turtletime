@@ -1,3 +1,4 @@
+use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::TextureAssets;
 use crate::menu::connect::LocalHandle;
 use crate::network::{AgreedRandom, GGRSConfig, INPUT_EXIT};
@@ -101,7 +102,7 @@ fn camera_follow(
 
 fn spawn_players(
     mut commands: Commands,
-    textures: Res<TextureAssets>,
+    characters: Res<CharacterSheet>,
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
 ) {
@@ -112,20 +113,25 @@ fn spawn_players(
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
+    let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
+    sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
+
     for handle in 0..NUM_PLAYERS {
         let name = format!("Player {}", handle);
         commands.spawn((
-            SpriteBundle {
-                sprite: Sprite {
-                    custom_size: Some(Vec2::splat(TILE_SIZE * 2.)),
-                    ..Default::default()
-                },
-                texture: textures.texture_turtle_cheeks2.clone(),
+            SpriteSheetBundle {
+                sprite: sprite.clone(),
+                texture_atlas: characters.handle.clone(),
                 transform: Transform {
                     translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
                     ..Default::default()
                 },
                 ..Default::default()
+            },
+            FrameAnimation {
+                timer: Timer::from_seconds(0.2, TimerMode::Repeating),
+                frames: characters.turtle_frames.to_vec(),
+                current_frame: 0,
             },
             Name::new(name),
             Player {
@@ -167,7 +173,7 @@ fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerCompo
 fn move_players(
     inputs: Res<PlayerInputs<GGRSConfig>>,
     walls: Query<&Transform, (With<TileCollider>, Without<Player>)>,
-    mut players: Query<(&mut Transform, &mut Sprite, &mut Player), With<Rollback>>,
+    mut players: Query<(&mut Transform, &mut TextureAtlasSprite, &mut Player), With<Rollback>>,
 ) {
     // loop over all players and apply their inputs to movement
     // do NOT return early because we need to check all players for input/movement

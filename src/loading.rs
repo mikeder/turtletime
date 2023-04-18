@@ -46,6 +46,8 @@ pub struct TextureAssets {
     pub texture_turtle_cheeks: Handle<Image>,
     #[asset(path = "textures/turtlecheeks2.png")]
     pub texture_turtle_cheeks2: Handle<Image>,
+    #[asset(path = "textures/turtlecheeksframe.png")]
+    pub texture_turtle_cheeks_frame: Handle<Image>,
     #[asset(path = "textures/poop.png")]
     pub texture_poop: Handle<Image>,
     #[asset(path = "textures/strawberry.png")]
