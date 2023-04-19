@@ -52,6 +52,7 @@ pub const INPUT_LEFT: u8 = 1 << 2;
 pub const INPUT_RIGHT: u8 = 1 << 3;
 pub const INPUT_FIRE: u8 = 1 << 4;
 pub const INPUT_EXIT: u8 = 1 << 5;
+pub const INPUT_SPRINT: u8 = 1 << 6;
 
 pub fn input(_: In<ggrs::PlayerHandle>, keys: Res<Input<KeyCode>>) -> PlayerInput {
     let mut input = 0u8;
@@ -73,6 +74,9 @@ pub fn input(_: In<ggrs::PlayerHandle>, keys: Res<Input<KeyCode>>) -> PlayerInpu
     }
     if keys.any_pressed([KeyCode::Escape, KeyCode::Delete]) {
         input |= INPUT_EXIT;
+    }
+    if keys.pressed(KeyCode::LShift) {
+        input |= INPUT_SPRINT;
     }
 
     PlayerInput { input }
