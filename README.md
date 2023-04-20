@@ -6,7 +6,10 @@ Try it out here: https://mikeder.net/turtletime
 
 ## Features
 
-4 players spawn in a rectangle and can move independently.
+4 players spawn in a rectangle and can move independently. [WASD]
+Eating strawberries will give you a temporary sprint ability. [LSHIFT]
+Eating chili peppers will give you the ability to shoot [5] fireballs! [SPACE] or [RETURN]
+Players hit by 3-4 fireballs are set inactive, last remaining active player wins!
 
 ## Road Map
 
