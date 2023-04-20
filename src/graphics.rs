@@ -33,7 +33,7 @@ impl GraphicsPlugin {
         mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     ) {
         let turtle_atlas = TextureAtlas::from_grid(
-            assets.texture_turtle_cheeks_frame.clone(),
+            assets.texture_turtle_cheeks_frame_party_hat.clone(),
             Vec2::splat(TILE_SIZE),
             4,
             1,

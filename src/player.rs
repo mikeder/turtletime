@@ -564,12 +564,17 @@ fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &Fire
 fn kill_players(
     mut commands: Commands,
     mut player_query: Query<
-        (&mut Player, &mut FrameAnimation, &Transform),
+        (
+            &mut Player,
+            &mut FrameAnimation,
+            &mut TextureAtlasSprite,
+            &Transform,
+        ),
         (With<Player>, Without<Fireball>),
     >,
     fireball_query: Query<(Entity, &Transform, &Fireball)>,
 ) {
-    for (mut player, mut animation, player_transform) in player_query.iter_mut() {
+    for (mut player, mut animation, mut sprite, player_transform) in player_query.iter_mut() {
         for (entity, fireball_transform, fireball) in fireball_query.iter() {
             let distance = player_transform
                 .translation
@@ -583,7 +588,8 @@ fn kill_players(
                 player.health -= FIREBALL_DAMAGE;
                 if player.health <= 0. {
                     animation.timer.set_mode(TimerMode::Once);
-                    player.active = false; // TODO: kill player
+                    sprite.flip_y = true;
+                    player.active = false;
                 }
                 commands.entity(entity).despawn_recursive();
             }
