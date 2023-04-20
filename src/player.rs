@@ -17,13 +17,15 @@ use bevy_inspector_egui::prelude::*;
 use ggrs::InputStatus;
 use rand::Rng;
 
-const FIREBALL_RADIUS: f32 = 5.0;
+const FIREBALL_RADIUS: f32 = 8.0;
 const FIREBALL_DAMAGE: f32 = 25.0;
+const FIREBALL_LIFETIME: f32 = 10.0; // fireballs live for 10s
 const STARTING_HEALTH: f32 = 100.;
 const STARTING_SPEED: f32 = 150.;
 const MAXIMUM_SPEED: f32 = 1500.;
 const CHILI_PEPPER_SIZE: f32 = 20.0;
 const CHILI_PEPPER_SPAWN_RATE: f32 = 3.5;
+const CHILI_PEPPER_AMMO_COUNT: usize = 15;
 const STRAWBERRY_SIZE: f32 = 32.0;
 const STRAWBERRY_SPAWN_RATE: f32 = 2.5;
 
@@ -58,15 +60,35 @@ impl Default for Player {
 pub struct PlayerPlugin;
 
 #[derive(Component)]
-pub struct PlayerComponent;
+pub struct RoundComponent;
 
-#[derive(Component, Reflect, Default)]
-pub struct Fireball;
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct Fireball {
+    move_dir: Vec2,
+    shot_by: usize,
+    speed: f32,
+}
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct FireballTimer {
+    lifetime: Timer,
+}
+
+impl Default for FireballTimer {
+    fn default() -> Self {
+        FireballTimer {
+            lifetime: Timer::from_seconds(FIREBALL_LIFETIME, TimerMode::Once),
+        }
+    }
+}
 
 #[derive(Component, Reflect, Default)]
 pub struct FireballReady(pub bool);
 
 #[derive(Component, Reflect, Default, Clone, Copy)]
+#[reflect(Component)]
 pub struct MoveDir(pub Vec2);
 
 #[derive(Resource, Reflect)]
@@ -109,14 +131,16 @@ impl Plugin for PlayerPlugin {
             .add_system(spawn_strawberry_over_time.in_set(OnUpdate(GameState::RoundOnline)))
             .add_system(spawn_chili_pepper_over_time.in_set(OnUpdate(GameState::RoundLocal)))
             .add_system(spawn_chili_pepper_over_time.in_set(OnUpdate(GameState::RoundOnline)))
+            .add_system(tick_fireball_timers)
             // these systems will be executed as part of the advance frame update
             .add_systems(
                 (
                     move_players,
-                    reload_fireball,
-                    shoot_fireballs.after(move_players).after(reload_fireball),
-                    move_fireball.after(shoot_fireballs),
-                    kill_players.after(move_fireball).after(move_players),
+                    shoot_fireballs,
+                    reload_fireballs,
+                    move_fireballs,
+                    kill_players,
+                    despawn_old_fireballs,
                     player_ate_chili_pepper_system,
                     player_ate_strawberry_system,
                     check_win_state,
@@ -158,9 +182,7 @@ fn spawn_players(
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
 ) {
-    commands
-        .spawn(Camera2dBundle::default())
-        .insert(PlayerComponent);
+    commands.spawn((Camera2dBundle::default(), RoundComponent));
 
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
@@ -171,6 +193,7 @@ fn spawn_players(
     for handle in 0..NUM_PLAYERS {
         let name = format!("Player {}", handle);
         commands.spawn((
+            Name::new(name),
             SpriteSheetBundle {
                 sprite: sprite.clone(),
                 texture_atlas: characters.handle.clone(),
@@ -185,15 +208,14 @@ fn spawn_players(
                 frames: characters.turtle_frames.to_vec(),
                 current_frame: 0,
             },
-            Name::new(name),
             Player {
                 handle,
                 ..Default::default()
             },
             FireballReady(false),
-            PlayerComponent,
+            RoundComponent,
             MoveDir(Vec2::X),
-            Rollback::new(rip.next_id()),
+            rip.next(),
         ));
     }
 }
@@ -212,7 +234,7 @@ fn exit_to_menu(inputs: Res<PlayerInputs<GGRSConfig>>, mut state: ResMut<NextSta
     }
 }
 
-fn despawn_players(mut commands: Commands, query: Query<Entity, With<PlayerComponent>>) {
+fn despawn_players(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
     commands.remove_resource::<LocalHandle>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
@@ -361,15 +383,15 @@ fn spawn_strawberry_over_time(
         let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
-        debug!("Spawning strawberry!");
         commands.spawn((
+            Name::new("Strawberry"),
+            Strawberry {},
+            RoundComponent {},
             SpriteBundle {
                 transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 0.0),
                 texture: asset_server.texture_strawberry.clone(),
                 ..Default::default()
             },
-            Strawberry {},
-            PlayerComponent {},
         ));
     }
 }
@@ -379,7 +401,7 @@ fn spawn_strawberry_over_time(
 // TODO: cap movement at a certain speed
 fn player_ate_strawberry_system(
     mut commands: Commands,
-    mut player_query: Query<(&Transform, &mut Player)>,
+    mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
     strawberry_query: Query<(Entity, &Transform), With<Strawberry>>,
 ) {
     for (pt, mut p) in player_query.iter_mut() {
@@ -387,10 +409,9 @@ fn player_ate_strawberry_system(
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + STRAWBERRY_SIZE / 2.0 {
-                info!("Player ate strawberry!");
                 p.sprint_ammo += 1;
                 p.sprint_ready = true;
-                commands.entity(s).despawn();
+                commands.entity(s).despawn_recursive();
             }
         }
     }
@@ -409,8 +430,10 @@ fn spawn_chili_pepper_over_time(
         let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
-        debug!("Spawning chili pepper!");
         commands.spawn((
+            Name::new("ChiliPepper"),
+            ChiliPepper {},
+            RoundComponent {},
             SpriteBundle {
                 sprite: Sprite {
                     custom_size: Some(Vec2::splat(CHILI_PEPPER_SIZE * 1.5)),
@@ -420,8 +443,6 @@ fn spawn_chili_pepper_over_time(
                 texture: asset_server.texture_chili_pepper.clone(),
                 ..Default::default()
             },
-            ChiliPepper {},
-            PlayerComponent {},
         ));
     }
 }
@@ -431,24 +452,23 @@ fn spawn_chili_pepper_over_time(
 // TODO: cap movement at a certain speed
 fn player_ate_chili_pepper_system(
     mut commands: Commands,
-    mut player_query: Query<(&Transform, &mut Player, &mut FireballReady)>,
-    strawberry_query: Query<(Entity, &Transform), With<ChiliPepper>>,
+    mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
+    pepper_query: Query<(Entity, &Transform), With<ChiliPepper>>,
 ) {
-    for (pt, mut p, mut fireball_ready) in player_query.iter_mut() {
-        for (s, st) in strawberry_query.iter() {
+    for (pt, mut p) in player_query.iter_mut() {
+        for (s, st) in pepper_query.iter() {
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + CHILI_PEPPER_SIZE / 2.0 {
-                info!("Player ate chili pepper!");
-                p.fire_ball_ammo += 1;
-                fireball_ready.0 = true;
-                commands.entity(s).despawn();
+                p.fire_ball_ammo += CHILI_PEPPER_AMMO_COUNT;
+                commands.entity(s).despawn_recursive();
             }
         }
     }
 }
 
-fn reload_fireball(
+// reload_fireball prevents the player from continuously shooting fireballs by holding INPUT_FIRE
+fn reload_fireballs(
     inputs: Res<PlayerInputs<GGRSConfig>>,
     mut query: Query<(&mut FireballReady, &Player)>,
 ) {
@@ -468,10 +488,10 @@ fn shoot_fireballs(
     mut commands: Commands,
     inputs: Res<PlayerInputs<GGRSConfig>>,
     images: Res<TextureAssets>,
-    mut player_query: Query<(&Transform, &Player, &MoveDir, &mut FireballReady)>,
+    mut player_query: Query<(&Transform, &mut Player, &MoveDir, &mut FireballReady)>,
     mut rip: ResMut<RollbackIdProvider>,
 ) {
-    for (transform, player, move_dir, mut fireball_ready) in player_query.iter_mut() {
+    for (transform, mut player, move_dir, mut fireball_ready) in player_query.iter_mut() {
         if !player.active {
             continue; // don't let dead/inactive players continue firing
         }
@@ -486,41 +506,58 @@ fn shoot_fireballs(
         }
 
         if input & INPUT_FIRE != 0 {
-            if !fireball_ready.0 {
-                // fireball not ready
+            if !fireball_ready.0 || player.fire_ball_ammo == 0 {
+                // fireball not ready or player out of ammo
                 continue;
             }
+
+            // position fireball slightly away from players position
             let player_pos = transform.translation;
             let pos = player_pos
                 + (Vec3::new(move_dir.0.x, move_dir.0.y, 0.)) * (TILE_SIZE * 1.5)
                 + FIREBALL_RADIUS;
+
             commands.spawn((
-                Fireball,
-                *move_dir,
-                *player,
-                PlayerComponent,
-                Rollback::new(rip.next_id()),
+                Name::new("Fireball"),
+                Fireball {
+                    move_dir: move_dir.0,
+                    shot_by: player.handle,
+                    speed: player.speed,
+                },
+                FireballTimer::default(),
+                RoundComponent,
                 SpriteBundle {
-                    transform: Transform::from_xyz(pos.x, pos.y, pos.z)
-                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, move_dir.0)), // spawn fireball a little away from player
+                    transform: Transform::from_xyz(pos.x, pos.y, 0.)
+                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, move_dir.0)),
                     texture: images.texture_fireball.clone(),
-                    sprite: Sprite {
-                        custom_size: Some(Vec2::splat(TILE_SIZE * 0.75)),
-                        ..default()
-                    },
                     ..default()
                 },
+                rip.next(),
             ));
-            // player.fire_ball_ammo -= 1; // TODO: fix panic
+
+            player.fire_ball_ammo -= 1;
             fireball_ready.0 = false;
         }
     }
 }
 
-fn move_fireball(mut query: Query<(&mut Transform, &MoveDir, &Player), With<Fireball>>) {
-    for (mut transform, dir, player) in query.iter_mut() {
-        let delta = (dir.0 * (player.speed * 0.05)).extend(0.);
-        transform.translation += delta;
+fn move_fireballs(mut query: Query<(&mut Transform, &Fireball)>) {
+    for (mut transform, fireball) in query.iter_mut() {
+        transform.translation += (fireball.move_dir * (fireball.speed * 0.05)).extend(0.);
+    }
+}
+
+fn tick_fireball_timers(mut query: Query<&mut FireballTimer>, time: Res<Time>) {
+    for mut timer in query.iter_mut() {
+        timer.lifetime.tick(time.delta());
+    }
+}
+
+fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &FireballTimer)>) {
+    for (fireball, timer) in query.iter_mut() {
+        if timer.lifetime.finished() {
+            commands.entity(fireball).despawn_recursive()
+        }
     }
 }
 
@@ -530,21 +567,25 @@ fn kill_players(
         (&mut Player, &mut FrameAnimation, &Transform),
         (With<Player>, Without<Fireball>),
     >,
-    fireball_query: Query<(&Transform, Entity), With<Fireball>>,
+    fireball_query: Query<(Entity, &Transform, &Fireball)>,
 ) {
     for (mut player, mut animation, player_transform) in player_query.iter_mut() {
-        for (fireball_transform, fireball) in fireball_query.iter() {
+        for (entity, fireball_transform, fireball) in fireball_query.iter() {
             let distance = player_transform
                 .translation
                 .distance(fireball_transform.translation);
 
+            if fireball.shot_by == player.handle {
+                continue; // don't allow player to suicide
+            };
+
             if distance < TILE_SIZE + FIREBALL_RADIUS {
-                commands.entity(fireball).despawn_recursive();
                 player.health -= FIREBALL_DAMAGE;
                 if player.health <= 0. {
                     animation.timer.set_mode(TimerMode::Once);
                     player.active = false; // TODO: kill player
                 }
+                commands.entity(entity).despawn_recursive();
             }
         }
     }
@@ -562,7 +603,7 @@ fn check_win_state(
         }
     }
     if remaning_active.len() == 1 {
-        let result = format!("{} wins the round!", remaning_active[0].handle);
+        let result = format!("Player {} wins the round!", remaning_active[0].handle);
         commands.insert_resource(MatchData { result });
         next_state.set(GameState::Win)
     }
