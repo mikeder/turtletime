@@ -1,6 +1,6 @@
 [package]
 name = "turtle_time"
-version = "0.1.0"
+version = "0.2.0"
 publish = false
 authors = ["Mike Eder <mikedernet@gmail.com>"]   # ToDo: you are the author 
 edition = "2021"
