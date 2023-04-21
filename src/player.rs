@@ -126,11 +126,25 @@ impl Plugin for PlayerPlugin {
             .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
-            .add_system(tick_edible_timer)
-            .add_system(spawn_strawberry_over_time.in_set(OnUpdate(GameState::RoundLocal)))
-            .add_system(spawn_strawberry_over_time.in_set(OnUpdate(GameState::RoundOnline)))
-            .add_system(spawn_chili_pepper_over_time.in_set(OnUpdate(GameState::RoundLocal)))
-            .add_system(spawn_chili_pepper_over_time.in_set(OnUpdate(GameState::RoundOnline)))
+            .add_systems(
+                (
+                    tick_edible_timer,
+                    spawn_strawberry_over_time,
+                    spawn_chili_pepper_over_time,
+                )
+                    .chain()
+                    .in_set(OnUpdate(GameState::RoundLocal)),
+            )
+            .add_systems(
+                (
+                    tick_edible_timer,
+                    spawn_strawberry_over_time,
+                    spawn_chili_pepper_over_time,
+                )
+                    .chain()
+                    .in_set(OnUpdate(GameState::RoundOnline)),
+            )
+            // fireball timers only used for despawn of old fireballs
             .add_system(tick_fireball_timers)
             // these systems will be executed as part of the advance frame update
             .add_systems(
