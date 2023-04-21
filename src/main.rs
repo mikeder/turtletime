@@ -9,7 +9,7 @@ use bevy::DefaultPlugins;
 use bevy_ggrs::GGRSPlugin;
 use std::io::Cursor;
 use turtle_time::network::{input, FrameCount, GGRSConfig};
-use turtle_time::player::{Fireball, FireballReady, MoveDir};
+use turtle_time::player::{ChiliPepper, Fireball, FireballReady, MoveDir, Strawberry};
 use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
 use winit::window::Icon;
 
@@ -19,9 +19,11 @@ fn main() {
     GGRSPlugin::<GGRSConfig>::new()
         .with_update_frequency(FPS)
         .with_input_system(input)
+        .register_rollback_component::<ChiliPepper>()
         .register_rollback_component::<Fireball>()
         .register_rollback_component::<FireballReady>()
         .register_rollback_component::<MoveDir>()
+        .register_rollback_component::<Strawberry>()
         .register_rollback_component::<Transform>()
         .register_rollback_resource::<FrameCount>()
         .build(&mut app);

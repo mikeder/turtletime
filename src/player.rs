@@ -126,24 +126,6 @@ impl Plugin for PlayerPlugin {
             .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
-            .add_systems(
-                (
-                    tick_edible_timer,
-                    spawn_strawberry_over_time,
-                    spawn_chili_pepper_over_time,
-                )
-                    .chain()
-                    .in_set(OnUpdate(GameState::RoundLocal)),
-            )
-            .add_systems(
-                (
-                    tick_edible_timer,
-                    spawn_strawberry_over_time,
-                    spawn_chili_pepper_over_time,
-                )
-                    .chain()
-                    .in_set(OnUpdate(GameState::RoundOnline)),
-            )
             // fireball timers only used for despawn of old fireballs
             .add_system(tick_fireball_timers)
             // these systems will be executed as part of the advance frame update
@@ -154,11 +136,14 @@ impl Plugin for PlayerPlugin {
                     reload_fireballs,
                     move_fireballs,
                     kill_players,
-                    despawn_old_fireballs,
+                    tick_edible_timer,
+                    spawn_strawberry_over_time,
+                    spawn_chili_pepper_over_time,
                     player_ate_chili_pepper_system,
                     player_ate_strawberry_system,
                     check_win_state,
                     exit_to_menu,
+                    despawn_old_fireballs,
                 )
                     .chain()
                     .in_schedule(GGRSSchedule),
@@ -386,10 +371,11 @@ fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>, time: Res
 
 fn spawn_strawberry_over_time(
     mut commands: Commands,
-    spawner_query: Query<&Transform, With<EncounterSpawner>>,
+    mut agreed_seed: ResMut<AgreedRandom>,
+    mut rip: ResMut<RollbackIdProvider>,
     asset_server: Res<TextureAssets>,
     timer: Res<EdibleSpawnTimer>,
-    mut agreed_seed: ResMut<AgreedRandom>,
+    spawner_query: Query<&Transform, With<EncounterSpawner>>,
 ) {
     if timer.strawberry_timer.finished() {
         let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
@@ -402,10 +388,11 @@ fn spawn_strawberry_over_time(
             Strawberry {},
             RoundComponent {},
             SpriteBundle {
-                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 0.0),
+                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
                 texture: asset_server.texture_strawberry.clone(),
                 ..Default::default()
             },
+            rip.next(),
         ));
     }
 }
@@ -416,7 +403,7 @@ fn spawn_strawberry_over_time(
 fn player_ate_strawberry_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
-    strawberry_query: Query<(Entity, &Transform), With<Strawberry>>,
+    strawberry_query: Query<(Entity, &Transform), (With<Strawberry>, With<Rollback>)>,
 ) {
     for (pt, mut p) in player_query.iter_mut() {
         for (s, st) in strawberry_query.iter() {
@@ -433,10 +420,11 @@ fn player_ate_strawberry_system(
 
 fn spawn_chili_pepper_over_time(
     mut commands: Commands,
-    spawner_query: Query<&Transform, With<EncounterSpawner>>,
+    mut agreed_seed: ResMut<AgreedRandom>,
+    mut rip: ResMut<RollbackIdProvider>,
     asset_server: Res<TextureAssets>,
     timer: Res<EdibleSpawnTimer>,
-    mut agreed_seed: ResMut<AgreedRandom>,
+    spawner_query: Query<&Transform, With<EncounterSpawner>>,
 ) {
     if timer.chili_pepper_timer.finished() {
         let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
@@ -453,10 +441,11 @@ fn spawn_chili_pepper_over_time(
                     custom_size: Some(Vec2::splat(CHILI_PEPPER_SIZE * 1.5)),
                     ..Default::default()
                 },
-                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 0.0),
+                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
                 texture: asset_server.texture_chili_pepper.clone(),
                 ..Default::default()
             },
+            rip.next(),
         ));
     }
 }
@@ -467,7 +456,7 @@ fn spawn_chili_pepper_over_time(
 fn player_ate_chili_pepper_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
-    pepper_query: Query<(Entity, &Transform), With<ChiliPepper>>,
+    pepper_query: Query<(Entity, &Transform), (With<ChiliPepper>, With<Rollback>)>,
 ) {
     for (pt, mut p) in player_query.iter_mut() {
         for (s, st) in pepper_query.iter() {
@@ -500,10 +489,10 @@ fn reload_fireballs(
 
 fn shoot_fireballs(
     mut commands: Commands,
+    mut rip: ResMut<RollbackIdProvider>,
     inputs: Res<PlayerInputs<GGRSConfig>>,
     images: Res<TextureAssets>,
     mut player_query: Query<(&Transform, &mut Player, &MoveDir, &mut FireballReady)>,
-    mut rip: ResMut<RollbackIdProvider>,
 ) {
     for (transform, mut player, move_dir, mut fireball_ready) in player_query.iter_mut() {
         if !player.active {
@@ -555,7 +544,7 @@ fn shoot_fireballs(
     }
 }
 
-fn move_fireballs(mut query: Query<(&mut Transform, &Fireball)>) {
+fn move_fireballs(mut query: Query<(&mut Transform, &Fireball), With<Rollback>>) {
     for (mut transform, fireball) in query.iter_mut() {
         transform.translation += (fireball.move_dir * (fireball.speed * 0.05)).extend(0.);
     }
@@ -586,7 +575,7 @@ fn kill_players(
         ),
         (With<Player>, Without<Fireball>),
     >,
-    fireball_query: Query<(Entity, &Transform, &Fireball)>,
+    fireball_query: Query<(Entity, &Transform, &Fireball), With<Rollback>>,
 ) {
     for (mut player, mut animation, mut sprite, player_transform) in player_query.iter_mut() {
         for (entity, fireball_transform, fireball) in fireball_query.iter() {
