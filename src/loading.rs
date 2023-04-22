@@ -36,8 +36,6 @@ pub struct AudioAssets {
 
 #[derive(AssetCollection, Resource)]
 pub struct TextureAssets {
-    #[asset(path = "textures/grass.png")]
-    pub texture_grass: Handle<Image>,
     #[asset(path = "textures/turtle.png")]
     pub texture_turtle: Handle<Image>,
     #[asset(path = "textures/turtle2.png")]
@@ -60,4 +58,29 @@ pub struct TextureAssets {
     pub texture_chili_pepper: Handle<Image>,
     #[asset(path = "textures/fireball.png")]
     pub texture_fireball: Handle<Image>,
+    // map textures
+    #[asset(path = "textures/dirt.png")]
+    pub texture_dirt: Handle<Image>,
+    #[asset(path = "textures/grass.png")]
+    pub texture_grass: Handle<Image>,
+    #[asset(path = "textures/fencebottom.png")]
+    pub texture_fencebottom: Handle<Image>,
+    #[asset(path = "textures/fencetop.png")]
+    pub texture_fencetop: Handle<Image>,
+    #[asset(path = "textures/shortgrass.png")]
+    pub texture_shortgrass: Handle<Image>,
+    #[asset(path = "textures/shortgrassblue.png")]
+    pub texture_shortgrassblue: Handle<Image>,
+    #[asset(path = "textures/shortgrasspink.png")]
+    pub texture_shortgrasspink: Handle<Image>,
+    #[asset(path = "textures/water.png")]
+    pub texture_water: Handle<Image>,
+    #[asset(path = "textures/shortgrassedge.png")]
+    pub texture_shortgrassedge: Handle<Image>,
+    #[asset(path = "textures/shortgrasstopedge.png")]
+    pub texture_shortgrasstopedge: Handle<Image>,
+    #[asset(path = "textures/wateredge.png")]
+    pub texture_wateredge: Handle<Image>,
+    #[asset(path = "textures/peanut.png")]
+    pub texture_peanutqueen: Handle<Image>,
 }

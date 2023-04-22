@@ -1,10 +1,10 @@
 use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::TextureAssets;
+use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::win::MatchData;
 use crate::network::{AgreedRandom, GGRSConfig, INPUT_EXIT, INPUT_FIRE, INPUT_SPRINT};
 use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
-use crate::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::{GameState, FPS};
 use crate::{NUM_PLAYERS, TILE_SIZE};
 use bevy::prelude::*;
@@ -17,8 +17,8 @@ use bevy_inspector_egui::prelude::*;
 use ggrs::InputStatus;
 use rand::Rng;
 
-const FIREBALL_RADIUS: f32 = 8.0;
-const FIREBALL_DAMAGE: f32 = 25.0;
+const FIREBALL_RADIUS: f32 = 12.0;
+const FIREBALL_DAMAGE: f32 = 5.0;
 const FIREBALL_LIFETIME: f32 = 10.0; // fireballs live for 10s
 const STARTING_HEALTH: f32 = 100.;
 const STARTING_SPEED: f32 = 150.;
@@ -530,7 +530,7 @@ fn shoot_fireballs(
                 FireballTimer::default(),
                 RoundComponent,
                 SpriteBundle {
-                    transform: Transform::from_xyz(pos.x, pos.y, 0.)
+                    transform: Transform::from_xyz(pos.x, pos.y, 1.)
                         .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, move_dir.0)),
                     texture: images.texture_fireball.clone(),
                     ..default()

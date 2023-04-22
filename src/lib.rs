@@ -4,10 +4,10 @@ mod audio;
 mod debug;
 mod graphics;
 mod loading;
+mod map;
 mod menu;
 pub mod network;
 pub mod player;
-mod tilemap;
 use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::debug::DebugPlugin;
@@ -17,8 +17,8 @@ use ascii::AsciiPlugin;
 use bevy::app::App;
 use bevy::prelude::*;
 use graphics::GraphicsPlugin;
+use map::tilemap::TileMapPlugin;
 use menu::plugin::MenuPlugin;
-use tilemap::TileMapPlugin;
 
 #[cfg(debug_assertions)]
 use bevy::diagnostic::LogDiagnosticsPlugin;

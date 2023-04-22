@@ -1,9 +1,6 @@
+use super::map::ASCII_MAP;
+use crate::{loading::TextureAssets, GameState, TILE_SIZE};
 use bevy::prelude::*;
-
-use crate::{
-    ascii::{spawn_ascii_sprite, AsciiSheet},
-    GameState, TILE_SIZE,
-};
 
 pub struct TileMapPlugin;
 
@@ -57,69 +54,62 @@ impl TileMapPlugin {
         }
     }
 
-    fn spawn_map(mut commands: Commands, ascii: Res<AsciiSheet>) {
+    fn spawn_map(mut commands: Commands, textures: Res<TextureAssets>) {
         let mut tiles = Vec::new();
+        let map = ASCII_MAP.to_string();
 
-        let map = "
-==========================================
-|~~~~~~............................~~~~~~|
-|~~!~~~............................~~~!~~|
-|~~~~~~............................~~~~~~|
-|........................................|
-|........................................|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........~~~~~~~~~~~~~~~~~~~~~~~~........|
-|........................................|
-|........................................|
-|~~~~~~............................~~~~~~|
-|~~!~~~............................~~~!~~|
-|~~~~~~............................~~~~~~|
-=========================================="
-            .to_string();
-
-        for (y, line) in map.split("\n").into_iter().enumerate() {
-            if y == 0 {
+        let lines = map.split("\n");
+        let top: usize = 0;
+        for (y, line) in lines.into_iter().enumerate() {
+            if y == top {
                 // skip first line because its only a \n
                 continue;
             }
             for (x, char) in line.chars().enumerate() {
-                let color = match char {
-                    '#' => Color::rgb(0.7, 0.7, 0.7), // walls
-                    '|' => Color::rgb(0.7, 0.7, 0.7), // walls
-                    '=' => Color::rgb(0.7, 0.7, 0.7), // walls
-                    '$' => Color::rgb(0.5, 0.5, 0.2), // npc
-                    '~' => Color::rgb(0.2, 0.9, 0.2), // grass
-                    '!' => Color::AQUAMARINE,         // player spawn
-                    _ => Color::rgb(0.9, 0.9, 0.9),
+                let texture = match char {
+                    // bottom fence
+                    '_' => textures.texture_fencebottom.clone(),
+                    // top fence
+                    '=' => textures.texture_fencetop.clone(),
+                    // grass w/ blue flowers
+                    '!' => textures.texture_shortgrassblue.clone(),
+                    // grass w/ ping flowers
+                    '~' => textures.texture_shortgrasspink.clone(),
+                    // short grass
+                    '.' => textures.texture_shortgrass.clone(),
+                    // water
+                    '&' => textures.texture_water.clone(),
+                    // water edge
+                    '%' => textures.texture_wateredge.clone(),
+                    // the queen
+                    '$' => textures.texture_peanutqueen.clone(),
+                    // grass edge bottom
+                    '^' | '+' => textures.texture_shortgrasstopedge.clone(),
+                    // grass edge top
+                    '`' => textures.texture_shortgrassedge.clone(),
+                    // dirt path
+                    '*' => textures.texture_dirt.clone(),
+                    // default to dirt
+                    _ => textures.texture_dirt.clone(),
                 };
                 let translation = Vec3::new(x as f32 * TILE_SIZE, -(y as f32) * TILE_SIZE, 0.0);
-                let scale = Vec3::splat(1.0);
-                let tile = spawn_ascii_sprite(
-                    &mut commands,
-                    &ascii,
-                    char as usize,
-                    color,
-                    translation,
-                    scale,
-                );
-                if char == '|' || char == '=' {
+                let sprite = SpriteBundle {
+                    sprite: Sprite {
+                        ..Default::default()
+                    },
+                    transform: Transform::from_translation(translation),
+                    texture,
+                    ..Default::default()
+                };
+                let tile = commands.spawn(sprite).id();
+                if char == '|'
+                    || char == '='
+                    || char == '_'
+                    || char == '%'
+                    || char == '^'
+                    || char == '$'
+                {
                     // Walls
-                    commands.entity(tile).insert(TileCollider);
-                }
-                if char == '$' {
-                    // NPC
                     commands.entity(tile).insert(TileCollider);
                 }
                 if char == '~' {
