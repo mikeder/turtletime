@@ -15,6 +15,7 @@ impl Plugin for AsciiPlugin {
     }
 }
 
+#[allow(dead_code)] // hold for later
 pub fn spawn_ascii_sprite(
     commands: &mut Commands,
     ascii: &AsciiSheet,

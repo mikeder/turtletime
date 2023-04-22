@@ -9,7 +9,7 @@ use bevy::DefaultPlugins;
 use bevy_ggrs::GGRSPlugin;
 use std::io::Cursor;
 use turtle_time::network::{input, FrameCount, GGRSConfig};
-use turtle_time::player::{ChiliPepper, Fireball, FireballReady, MoveDir, Strawberry};
+use turtle_time::player::components::{ChiliPepper, Fireball, FireballReady, MoveDir, Strawberry};
 use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
 use winit::window::Icon;
 

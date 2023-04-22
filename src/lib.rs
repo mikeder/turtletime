@@ -12,13 +12,13 @@ use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::debug::DebugPlugin;
 use crate::loading::LoadingPlugin;
-use crate::player::PlayerPlugin;
 use ascii::AsciiPlugin;
 use bevy::app::App;
 use bevy::prelude::*;
 use graphics::GraphicsPlugin;
 use map::tilemap::TileMapPlugin;
 use menu::plugin::MenuPlugin;
+use player::plugin::PlayerPlugin;
 
 #[cfg(debug_assertions)]
 use bevy::diagnostic::LogDiagnosticsPlugin;

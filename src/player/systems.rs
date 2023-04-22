@@ -1,3 +1,8 @@
+use super::components::{
+    ChiliPepper, EdibleSpawnTimer, Fireball, FireballReady, FireballTimer, MoveDir, Player,
+    RoundComponent, Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE,
+    FIREBALL_RADIUS, MAXIMUM_SPEED, STARTING_SPEED, STRAWBERRY_SIZE,
+};
 use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::TextureAssets;
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
@@ -12,146 +17,11 @@ use bevy::sprite::collide_aabb::collide;
 use bevy_ggrs::PlayerInputs;
 use bevy_ggrs::Rollback;
 use bevy_ggrs::RollbackIdProvider;
-use bevy_ggrs::{GGRSSchedule, Session};
-use bevy_inspector_egui::prelude::*;
+use bevy_ggrs::Session;
 use ggrs::InputStatus;
 use rand::Rng;
 
-const FIREBALL_RADIUS: f32 = 12.0;
-const FIREBALL_DAMAGE: f32 = 5.0;
-const FIREBALL_LIFETIME: f32 = 10.0; // fireballs live for 10s
-const STARTING_HEALTH: f32 = 100.;
-const STARTING_SPEED: f32 = 150.;
-const MAXIMUM_SPEED: f32 = 1500.;
-const CHILI_PEPPER_SIZE: f32 = 20.0;
-const CHILI_PEPPER_SPAWN_RATE: f32 = 3.5;
-const CHILI_PEPPER_AMMO_COUNT: usize = 15;
-const STRAWBERRY_SIZE: f32 = 32.0;
-const STRAWBERRY_SPAWN_RATE: f32 = 2.5;
-
-#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
-#[reflect(Component, InspectorOptions)]
-pub struct Player {
-    active: bool,
-    fire_ball_ammo: usize,
-    sprint_ready: bool,
-    sprint_ammo: usize,
-    handle: usize,
-    health: f32,
-    just_moved: bool,
-    speed: f32,
-}
-
-impl Default for Player {
-    fn default() -> Self {
-        Player {
-            active: true,
-            fire_ball_ammo: 0,
-            sprint_ready: false,
-            sprint_ammo: 0,
-            handle: 0,
-            health: STARTING_HEALTH,
-            just_moved: false,
-            speed: STARTING_SPEED,
-        }
-    }
-}
-
-pub struct PlayerPlugin;
-
-#[derive(Component)]
-pub struct RoundComponent;
-
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
-pub struct Fireball {
-    move_dir: Vec2,
-    shot_by: usize,
-    speed: f32,
-}
-
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-pub struct FireballTimer {
-    lifetime: Timer,
-}
-
-impl Default for FireballTimer {
-    fn default() -> Self {
-        FireballTimer {
-            lifetime: Timer::from_seconds(FIREBALL_LIFETIME, TimerMode::Once),
-        }
-    }
-}
-
-#[derive(Component, Reflect, Default)]
-pub struct FireballReady(pub bool);
-
-#[derive(Component, Reflect, Default, Clone, Copy)]
-#[reflect(Component)]
-pub struct MoveDir(pub Vec2);
-
-#[derive(Resource, Reflect)]
-#[reflect(Resource)]
-pub struct EdibleSpawnTimer {
-    chili_pepper_timer: Timer,
-    strawberry_timer: Timer,
-}
-
-impl Default for EdibleSpawnTimer {
-    fn default() -> Self {
-        EdibleSpawnTimer {
-            chili_pepper_timer: Timer::from_seconds(CHILI_PEPPER_SPAWN_RATE, TimerMode::Repeating),
-            strawberry_timer: Timer::from_seconds(STRAWBERRY_SPAWN_RATE, TimerMode::Repeating),
-        }
-    }
-}
-
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
-pub struct ChiliPepper;
-
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
-pub struct Strawberry;
-
-/// This plugin handles player related stuff like movement
-/// Player logic is only active during the State `GameState::Playing`
-impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<EdibleSpawnTimer>()
-            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
-            .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
-            .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
-            .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
-            .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
-            .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
-            // fireball timers only used for despawn of old fireballs
-            .add_system(tick_fireball_timers)
-            // these systems will be executed as part of the advance frame update
-            .add_systems(
-                (
-                    move_players,
-                    shoot_fireballs,
-                    reload_fireballs,
-                    move_fireballs,
-                    kill_players,
-                    tick_edible_timer,
-                    spawn_strawberry_over_time,
-                    spawn_chili_pepper_over_time,
-                    player_ate_chili_pepper_system,
-                    player_ate_strawberry_system,
-                    check_win_state,
-                    exit_to_menu,
-                    despawn_old_fireballs,
-                )
-                    .chain()
-                    .in_schedule(GGRSSchedule),
-            );
-    }
-}
-
-fn camera_follow(
+pub fn camera_follow(
     player_handle: Option<Res<LocalHandle>>,
     player_query: Query<(&Transform, &Player), Without<Fireball>>,
     mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera>)>,
@@ -175,7 +45,7 @@ fn camera_follow(
     }
 }
 
-fn spawn_players(
+pub fn spawn_players(
     mut commands: Commands,
     characters: Res<CharacterSheet>,
     mut rip: ResMut<RollbackIdProvider>,
@@ -219,7 +89,10 @@ fn spawn_players(
     }
 }
 
-fn exit_to_menu(inputs: Res<PlayerInputs<GGRSConfig>>, mut state: ResMut<NextState<GameState>>) {
+pub fn exit_to_menu(
+    inputs: Res<PlayerInputs<GGRSConfig>>,
+    mut state: ResMut<NextState<GameState>>,
+) {
     for (handle, input) in inputs.iter().enumerate() {
         match input.1 {
             InputStatus::Confirmed => {
@@ -233,7 +106,7 @@ fn exit_to_menu(inputs: Res<PlayerInputs<GGRSConfig>>, mut state: ResMut<NextSta
     }
 }
 
-fn despawn_players(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
+pub fn despawn_players(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
     commands.remove_resource::<LocalHandle>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
@@ -242,7 +115,7 @@ fn despawn_players(mut commands: Commands, query: Query<Entity, With<RoundCompon
     }
 }
 
-fn move_players(
+pub fn move_players(
     inputs: Res<PlayerInputs<GGRSConfig>>,
     walls: Query<&Transform, (With<TileCollider>, Without<Player>)>,
     mut players: Query<
@@ -354,7 +227,7 @@ fn move_players(
     }
 }
 
-fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> bool {
+pub fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> bool {
     let collision = collide(
         target_player_pos,
         Vec2::splat(TILE_SIZE * 0.9), // give player small amount of leeway
@@ -364,12 +237,12 @@ fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> bool
     collision.is_some()
 }
 
-fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>, time: Res<Time>) {
+pub fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>, time: Res<Time>) {
     edible_spawn_timer.chili_pepper_timer.tick(time.delta());
     edible_spawn_timer.strawberry_timer.tick(time.delta());
 }
 
-fn spawn_strawberry_over_time(
+pub fn spawn_strawberry_over_time(
     mut commands: Commands,
     mut agreed_seed: ResMut<AgreedRandom>,
     mut rip: ResMut<RollbackIdProvider>,
@@ -400,7 +273,7 @@ fn spawn_strawberry_over_time(
 // TODO: add sound
 // TODO: build sprint
 // TODO: cap movement at a certain speed
-fn player_ate_strawberry_system(
+pub fn player_ate_strawberry_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
     strawberry_query: Query<(Entity, &Transform), (With<Strawberry>, With<Rollback>)>,
@@ -418,7 +291,7 @@ fn player_ate_strawberry_system(
     }
 }
 
-fn spawn_chili_pepper_over_time(
+pub fn spawn_chili_pepper_over_time(
     mut commands: Commands,
     mut agreed_seed: ResMut<AgreedRandom>,
     mut rip: ResMut<RollbackIdProvider>,
@@ -453,7 +326,7 @@ fn spawn_chili_pepper_over_time(
 // TODO: add sound
 // TODO: build sprint
 // TODO: cap movement at a certain speed
-fn player_ate_chili_pepper_system(
+pub fn player_ate_chili_pepper_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
     pepper_query: Query<(Entity, &Transform), (With<ChiliPepper>, With<Rollback>)>,
@@ -471,7 +344,7 @@ fn player_ate_chili_pepper_system(
 }
 
 // reload_fireball prevents the player from continuously shooting fireballs by holding INPUT_FIRE
-fn reload_fireballs(
+pub fn reload_fireballs(
     inputs: Res<PlayerInputs<GGRSConfig>>,
     mut query: Query<(&mut FireballReady, &Player)>,
 ) {
@@ -487,7 +360,7 @@ fn reload_fireballs(
     }
 }
 
-fn shoot_fireballs(
+pub fn shoot_fireballs(
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
     inputs: Res<PlayerInputs<GGRSConfig>>,
@@ -544,19 +417,19 @@ fn shoot_fireballs(
     }
 }
 
-fn move_fireballs(mut query: Query<(&mut Transform, &Fireball), With<Rollback>>) {
+pub fn move_fireballs(mut query: Query<(&mut Transform, &Fireball), With<Rollback>>) {
     for (mut transform, fireball) in query.iter_mut() {
         transform.translation += (fireball.move_dir * (fireball.speed * 0.05)).extend(0.);
     }
 }
 
-fn tick_fireball_timers(mut query: Query<&mut FireballTimer>, time: Res<Time>) {
+pub fn tick_fireball_timers(mut query: Query<&mut FireballTimer>, time: Res<Time>) {
     for mut timer in query.iter_mut() {
         timer.lifetime.tick(time.delta());
     }
 }
 
-fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &FireballTimer)>) {
+pub fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &FireballTimer)>) {
     for (fireball, timer) in query.iter_mut() {
         if timer.lifetime.finished() {
             commands.entity(fireball).despawn_recursive()
@@ -564,7 +437,7 @@ fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &Fire
     }
 }
 
-fn kill_players(
+pub fn kill_players(
     mut commands: Commands,
     mut player_query: Query<
         (
@@ -600,7 +473,7 @@ fn kill_players(
     }
 }
 
-fn check_win_state(
+pub fn check_win_state(
     mut commands: Commands,
     mut next_state: ResMut<NextState<GameState>>,
     player_query: Query<&Player, Without<Fireball>>,

@@ -4,7 +4,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::{
     menu::connect::LocalHandle,
-    player::{EdibleSpawnTimer, Fireball, Player, Strawberry},
+    player::components::{EdibleSpawnTimer, Fireball, Player, Strawberry},
 };
 
 pub struct DebugPlugin;
