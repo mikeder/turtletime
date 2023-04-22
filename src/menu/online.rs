@@ -1,7 +1,8 @@
 use super::connect::ConnectData;
+use super::options::PlayerCount;
 use super::plugin::{BUTTON_TEXT, DISABLED_BUTTON, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
-use crate::{GameState, NUM_PLAYERS};
+use crate::GameState;
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -249,6 +250,7 @@ pub fn btn_listeners(
     mut commands: Commands,
     mut state: ResMut<NextState<GameState>>,
     lobby_id: Res<LobbyID>,
+    player_count: Res<PlayerCount>,
     mut interaction_query: Query<
         (&Interaction, &MenuOnlineBtn, Option<&ButtonEnabled>),
         Changed<Interaction>,
@@ -274,7 +276,7 @@ pub fn btn_listeners(
                 }
                 MenuOnlineBtn::QuickMatch => {
                     commands.insert_resource(ConnectData {
-                        lobby_id: format!("turtletime?next={}", NUM_PLAYERS),
+                        lobby_id: format!("turtletime?next={}", player_count.0),
                     });
                     state.set(GameState::MenuConnect);
                 }

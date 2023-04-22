@@ -1,17 +1,18 @@
 use super::components::{
     ChiliPepper, EdibleSpawnTimer, Fireball, FireballReady, FireballTimer, MoveDir, Player,
     RoundComponent, Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE,
-    FIREBALL_RADIUS, MAXIMUM_SPEED, STARTING_SPEED, STRAWBERRY_SIZE,
+    FIREBALL_RADIUS, PLAYER_SPEED_MAX, PLAYER_SPEED_START, STRAWBERRY_SIZE,
 };
 use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::TextureAssets;
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
+use crate::menu::options::PlayerCount;
 use crate::menu::win::MatchData;
 use crate::network::{AgreedRandom, GGRSConfig, INPUT_EXIT, INPUT_FIRE, INPUT_SPRINT};
 use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
+use crate::TILE_SIZE;
 use crate::{GameState, FPS};
-use crate::{NUM_PLAYERS, TILE_SIZE};
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
 use bevy_ggrs::PlayerInputs;
@@ -48,6 +49,7 @@ pub fn camera_follow(
 pub fn spawn_players(
     mut commands: Commands,
     characters: Res<CharacterSheet>,
+    player_count: Res<PlayerCount>,
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
 ) {
@@ -59,7 +61,7 @@ pub fn spawn_players(
     let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
 
-    for handle in 0..NUM_PLAYERS {
+    for handle in 0..player_count.0 {
         let name = format!("Player {}", handle);
         commands.spawn((
             Name::new(name),
@@ -160,7 +162,7 @@ pub fn move_players(
             direction.x -= 1.;
         }
         if input & INPUT_SPRINT != 0 {
-            if player.sprint_ready && player.speed <= MAXIMUM_SPEED {
+            if player.sprint_ready && player.speed <= PLAYER_SPEED_MAX {
                 player.speed += 50.0;
                 player.sprint_ammo -= 1;
                 if player.sprint_ammo == 0 {
@@ -168,7 +170,7 @@ pub fn move_players(
                 }
             }
         } else {
-            if player.speed > STARTING_SPEED {
+            if player.speed > PLAYER_SPEED_START {
                 player.speed -= 1.;
             }
         }
@@ -272,7 +274,6 @@ pub fn spawn_strawberry_over_time(
 
 // TODO: add sound
 // TODO: build sprint
-// TODO: cap movement at a certain speed
 pub fn player_ate_strawberry_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
@@ -324,8 +325,6 @@ pub fn spawn_chili_pepper_over_time(
 }
 
 // TODO: add sound
-// TODO: build sprint
-// TODO: cap movement at a certain speed
 pub fn player_ate_chili_pepper_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,

@@ -1,7 +1,8 @@
+use super::options::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
 use crate::network::{self, GGRSConfig};
-use crate::{GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION, NUM_PLAYERS};
+use crate::{GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION};
 use bevy::prelude::*;
 use bevy::utils::Uuid;
 use bevy_ggrs::Session;
@@ -44,6 +45,7 @@ pub fn lobby_system(
     mut commands: Commands,
     mut socket: ResMut<MatchboxSocket<SingleChannel>>,
     mut state: ResMut<NextState<GameState>>,
+    player_count: Res<PlayerCount>,
     mut query: Query<&mut Text, With<LobbyText>>,
 ) {
     // regularly call update_peers to update the list of connected peers
@@ -56,7 +58,7 @@ pub fn lobby_system(
     }
 
     let connected_peers = socket.connected_peers().count();
-    let remaining = NUM_PLAYERS - (connected_peers + 1);
+    let remaining = player_count.0 - (connected_peers + 1);
     query.single_mut().sections[0].value = format!("Waiting for {remaining} more player(s)",);
     if remaining > 0 {
         return;
@@ -82,7 +84,7 @@ pub fn lobby_system(
 
     // Create GGRS P2P Session
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
-        .with_num_players(NUM_PLAYERS)
+        .with_num_players(player_count.0)
         .with_max_prediction_window(MAX_PREDICTION)
         .with_fps(FPS)
         .expect("Invalid FPS")
@@ -126,7 +128,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             style: Style {
                 position_type: PositionType::Absolute,
                 position: UiRect::all(Val::Px(0.)),
-                flex_direction: FlexDirection::ColumnReverse,
+                flex_direction: FlexDirection::Column,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
                 align_self: AlignSelf::Center,

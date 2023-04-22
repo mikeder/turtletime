@@ -30,7 +30,7 @@ pub const FPS: usize = 60;
 
 // const MATCHBOX_ADDR: &str = "ws://localhost:3536";
 const MATCHBOX_ADDR: &str = "wss://match.sqweeb.net:443";
-const NUM_PLAYERS: usize = 4;
+// const NUM_PLAYERS: usize = 4;
 const MAX_PREDICTION: usize = 12;
 const INPUT_DELAY: usize = 2;
 const CHECK_DISTANCE: usize = 2;
@@ -49,6 +49,8 @@ pub enum GameState {
     MenuConnect,
     // Menu for making online rounds
     MenuOnline,
+    // Menu for setting options
+    MenuOptions,
     // Game logic for online round is executed
     RoundOnline,
     // Game logic fo local round is executed

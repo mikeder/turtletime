@@ -3,8 +3,8 @@ use bevy_inspector_egui::prelude::*;
 use bevy_inspector_egui::InspectorOptions;
 
 pub const CHILI_PEPPER_SIZE: f32 = 20.0;
+pub const CHILI_PEPPER_AMMO_COUNT: usize = 5;
 const CHILI_PEPPER_SPAWN_RATE: f32 = 3.5;
-pub const CHILI_PEPPER_AMMO_COUNT: usize = 15;
 
 pub const FIREBALL_RADIUS: f32 = 12.0;
 pub const FIREBALL_DAMAGE: f32 = 5.0;
@@ -13,9 +13,9 @@ pub const FIREBALL_LIFETIME: f32 = 10.0;
 pub const STRAWBERRY_SIZE: f32 = 32.0;
 const STRAWBERRY_SPAWN_RATE: f32 = 2.5;
 
-pub const STARTING_HEALTH: f32 = 100.;
-pub const STARTING_SPEED: f32 = 150.;
-pub const MAXIMUM_SPEED: f32 = 1500.;
+pub const PLAYER_HEALTH_MAX: f32 = 100.;
+pub const PLAYER_SPEED_START: f32 = 100.;
+pub const PLAYER_SPEED_MAX: f32 = 1000.;
 
 #[derive(Component)]
 pub struct RoundComponent;
@@ -94,9 +94,9 @@ impl Default for Player {
             sprint_ready: false,
             sprint_ammo: 0,
             handle: 0,
-            health: STARTING_HEALTH,
+            health: PLAYER_HEALTH_MAX,
             just_moved: false,
-            speed: STARTING_SPEED,
+            speed: PLAYER_SPEED_START,
         }
     }
 }

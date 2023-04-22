@@ -1,8 +1,9 @@
 use super::connect::LocalHandle;
+use super::options::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION};
 use crate::loading::{FontAssets, TextureAssets};
 use crate::network::{self, GGRSConfig};
-use crate::{GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION, NUM_PLAYERS};
+use crate::{GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION};
 use bevy::utils::Uuid;
 use bevy::{app::AppExit, prelude::*};
 use bevy_ggrs::Session;
@@ -16,6 +17,7 @@ pub struct MainMenuUI;
 pub enum MainMenuBtn {
     OnlineMatch,
     LocalMatch,
+    Options,
     Quit,
 }
 
@@ -23,7 +25,13 @@ pub fn setup_ui(
     mut commands: Commands,
     image_assets: Res<TextureAssets>,
     font_assets: Res<FontAssets>,
+    player_count: Option<Res<PlayerCount>>,
 ) {
+    // default player count
+    if player_count.is_none() {
+        commands.insert_resource(PlayerCount(4));
+    }
+
     // ui camera
     commands.spawn(Camera2dBundle::default()).insert(MainMenuUI);
 
@@ -44,6 +52,18 @@ pub fn setup_ui(
             ..Default::default()
         })
         .with_children(|parent| {
+            parent.spawn(TextBundle {
+                text: Text::from_section(
+                    "Turtle Time!",
+                    TextStyle {
+                        font: font_assets.fira_sans.clone(),
+                        font_size: 50.0,
+                        color: BUTTON_TEXT,
+                    },
+                ),
+                ..Default::default()
+            });
+
             // logo
             parent.spawn(ImageBundle {
                 style: Style {
@@ -114,6 +134,35 @@ pub fn setup_ui(
                 })
                 .insert(MainMenuBtn::LocalMatch);
 
+            // local mode button
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
+                        ..Default::default()
+                    },
+                    background_color: BackgroundColor(NORMAL_BUTTON),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle {
+                        text: Text::from_section(
+                            "Options",
+                            TextStyle {
+                                font: font_assets.fira_sans.clone(),
+                                font_size: 40.0,
+                                color: BUTTON_TEXT,
+                            },
+                        ),
+                        ..Default::default()
+                    });
+                })
+                .insert(MainMenuBtn::Options);
+
             // quit button
             parent
                 .spawn(ButtonBundle {
@@ -183,6 +232,7 @@ pub fn btn_listeners(
     mut exit: EventWriter<AppExit>,
     mut commands: Commands,
     mut state: ResMut<NextState<GameState>>,
+    player_count: Res<PlayerCount>,
     mut interaction_query: Query<(&Interaction, &MainMenuBtn), Changed<Interaction>>,
 ) {
     for (interaction, btn) in interaction_query.iter_mut() {
@@ -192,8 +242,11 @@ pub fn btn_listeners(
                     state.set(GameState::MenuOnline);
                 }
                 MainMenuBtn::LocalMatch => {
-                    create_synctest_session(&mut commands);
+                    create_synctest_session(&mut commands, player_count.0);
                     state.set(GameState::RoundLocal);
+                }
+                MainMenuBtn::Options => {
+                    state.set(GameState::MenuOptions);
                 }
                 MainMenuBtn::Quit => {
                     exit.send(AppExit);
@@ -209,9 +262,9 @@ pub fn cleanup_ui(query: Query<Entity, With<MainMenuUI>>, mut commands: Commands
     }
 }
 
-fn create_synctest_session(commands: &mut Commands) {
+fn create_synctest_session(commands: &mut Commands, num_players: usize) {
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
-        .with_num_players(NUM_PLAYERS)
+        .with_num_players(num_players)
         .with_max_prediction_window(MAX_PREDICTION)
         .with_fps(FPS)
         .expect("Invalid FPS")
@@ -219,7 +272,7 @@ fn create_synctest_session(commands: &mut Commands) {
         .with_check_distance(CHECK_DISTANCE);
 
     let mut peer_ids = Vec::new();
-    for i in 0..NUM_PLAYERS {
+    for i in 0..num_players {
         sess_build = sess_build
             .add_player(PlayerType::Local, i)
             .expect("Could not add local player");

@@ -1,4 +1,4 @@
-use crate::menu::{connect, main, online, win};
+use crate::menu::{connect, main, online, options, win};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -49,6 +49,17 @@ impl Plugin for MenuPlugin {
                     .in_set(OnUpdate(GameState::MenuConnect)),
             )
             .add_system(connect::cleanup_ui.in_schedule(OnExit(GameState::MenuConnect)))
+            // options menu
+            .add_system(options::setup_ui.in_schedule(OnEnter(GameState::MenuOptions)))
+            .add_systems(
+                (
+                    options::btn_visuals,
+                    options::btn_listeners,
+                    options::update_player_count_display,
+                )
+                    .in_set(OnUpdate(GameState::MenuOptions)),
+            )
+            .add_system(options::cleanup_ui.in_schedule(OnExit(GameState::MenuOptions)))
             // win menu
             .add_system(win::setup_ui.in_schedule(OnEnter(GameState::Win)))
             .add_systems((win::btn_visuals, win::btn_listeners).in_set(OnUpdate(GameState::Win)))
