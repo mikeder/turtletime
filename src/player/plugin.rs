@@ -22,6 +22,7 @@ impl Plugin for PlayerPlugin {
             // these systems will be executed as part of the advance frame update
             .add_systems(
                 (
+                    apply_inputs,
                     move_players,
                     shoot_fireballs,
                     reload_fireballs,
@@ -33,7 +34,6 @@ impl Plugin for PlayerPlugin {
                     player_ate_chili_pepper_system,
                     player_ate_strawberry_system,
                     check_win_state,
-                    exit_to_menu,
                     despawn_old_fireballs,
                 )
                     .chain()

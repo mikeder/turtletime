@@ -2,8 +2,8 @@ use super::connect::LocalHandle;
 use super::options::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION};
 use crate::loading::{FontAssets, TextureAssets};
-use crate::network::{self, GGRSConfig};
-use crate::{GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION};
+use crate::player::input::GGRSConfig;
+use crate::{player, GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION};
 use bevy::utils::Uuid;
 use bevy::{app::AppExit, prelude::*};
 use bevy_ggrs::Session;
@@ -278,7 +278,7 @@ fn create_synctest_session(commands: &mut Commands, num_players: usize) {
             .expect("Could not add local player");
         peer_ids.push(PeerId(Uuid::new_v4()))
     }
-    let agreed_random = network::new_agreed_random(peer_ids);
+    let agreed_random = player::resources::new_agreed_random(peer_ids);
 
     let sess = sess_build.start_synctest_session().expect("");
 

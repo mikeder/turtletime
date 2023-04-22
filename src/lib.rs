@@ -1,13 +1,13 @@
 mod actions;
 mod ascii;
 mod audio;
-mod debug;
+pub mod debug;
 mod graphics;
 mod loading;
 mod map;
 mod menu;
-pub mod network;
 pub mod player;
+
 use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::debug::DebugPlugin;
@@ -82,9 +82,7 @@ impl Plugin for GamePlugin {
 
             // Without FPS
             app.add_plugin(DebugPlugin)
-                .add_plugin(LogDiagnosticsPlugin::default())
-                .add_system(network::log_ggrs_events.in_set(OnUpdate(GameState::RoundLocal)))
-                .add_system(network::log_ggrs_events.in_set(OnUpdate(GameState::RoundOnline)));
+                .add_plugin(LogDiagnosticsPlugin::default());
         }
     }
 }

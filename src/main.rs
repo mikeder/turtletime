@@ -1,6 +1,5 @@
 // disable console on windows for release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -8,8 +7,9 @@ use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
 use bevy_ggrs::GGRSPlugin;
 use std::io::Cursor;
-use turtle_time::network::{input, FrameCount, GGRSConfig};
-use turtle_time::player::components::{ChiliPepper, Fireball, FireballReady, MoveDir, Strawberry};
+use turtle_time::debug::FrameCount;
+use turtle_time::player::components::{ChiliPepper, Fireball, FireballReady, Strawberry};
+use turtle_time::player::input::{input, GGRSConfig, PlayerControls};
 use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
 use winit::window::Icon;
 
@@ -22,7 +22,7 @@ fn main() {
         .register_rollback_component::<ChiliPepper>()
         .register_rollback_component::<Fireball>()
         .register_rollback_component::<FireballReady>()
-        .register_rollback_component::<MoveDir>()
+        .register_rollback_component::<PlayerControls>()
         .register_rollback_component::<Strawberry>()
         .register_rollback_component::<Transform>()
         .register_rollback_resource::<FrameCount>()

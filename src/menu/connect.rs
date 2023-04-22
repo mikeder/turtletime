@@ -1,8 +1,8 @@
 use super::options::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
-use crate::network::{self, GGRSConfig};
-use crate::{GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION};
+use crate::player::input::GGRSConfig;
+use crate::{player, GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION};
 use bevy::prelude::*;
 use bevy::utils::Uuid;
 use bevy_ggrs::Session;
@@ -103,7 +103,7 @@ pub fn lobby_system(
     }
 
     // Create agreed random resource
-    let agreed_random = network::new_agreed_random(player_ids);
+    let agreed_random = player::resources::new_agreed_random(player_ids);
 
     // Start P2P session
     let channel = socket.take_channel(0).unwrap();

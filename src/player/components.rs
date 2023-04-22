@@ -7,14 +7,15 @@ pub const CHILI_PEPPER_AMMO_COUNT: usize = 5;
 const CHILI_PEPPER_SPAWN_RATE: f32 = 3.5;
 
 pub const FIREBALL_RADIUS: f32 = 12.0;
-pub const FIREBALL_DAMAGE: f32 = 5.0;
+pub const FIREBALL_DAMAGE: usize = 5;
 pub const FIREBALL_LIFETIME: f32 = 10.0;
 
 pub const STRAWBERRY_SIZE: f32 = 32.0;
 const STRAWBERRY_SPAWN_RATE: f32 = 2.5;
 
-pub const PLAYER_HEALTH_MAX: f32 = 100.;
+pub const PLAYER_HEALTH_MAX: usize = 100;
 pub const PLAYER_SPEED_START: f32 = 100.;
+pub const PLAYER_SPEED_SPRINT: f32 = 50.;
 pub const PLAYER_SPEED_MAX: f32 = 1000.;
 
 #[derive(Component)]
@@ -44,10 +45,6 @@ impl Default for FireballTimer {
 
 #[derive(Component, Reflect, Default)]
 pub struct FireballReady(pub bool);
-
-#[derive(Component, Reflect, Default, Clone, Copy)]
-#[reflect(Component)]
-pub struct MoveDir(pub Vec2);
 
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
@@ -81,7 +78,7 @@ pub struct Player {
     pub sprint_ready: bool,
     pub sprint_ammo: usize,
     pub handle: usize,
-    pub health: f32,
+    pub health: usize,
     pub just_moved: bool,
     pub speed: f32,
 }

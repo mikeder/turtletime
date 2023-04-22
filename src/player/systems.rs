@@ -1,16 +1,20 @@
 use super::components::{
-    ChiliPepper, EdibleSpawnTimer, Fireball, FireballReady, FireballTimer, MoveDir, Player,
-    RoundComponent, Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE,
-    FIREBALL_RADIUS, PLAYER_SPEED_MAX, PLAYER_SPEED_START, STRAWBERRY_SIZE,
+    ChiliPepper, EdibleSpawnTimer, Fireball, FireballReady, FireballTimer, Player, RoundComponent,
+    Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
+    PLAYER_SPEED_MAX, PLAYER_SPEED_SPRINT, PLAYER_SPEED_START, STRAWBERRY_SIZE,
 };
+use super::input::{
+    GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
+    INPUT_SPRINT, INPUT_UP,
+};
+use super::resources::AgreedRandom;
+
 use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::TextureAssets;
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::options::PlayerCount;
 use crate::menu::win::MatchData;
-use crate::network::{AgreedRandom, GGRSConfig, INPUT_EXIT, INPUT_FIRE, INPUT_SPRINT};
-use crate::network::{INPUT_DOWN, INPUT_LEFT, INPUT_RIGHT, INPUT_UP};
 use crate::TILE_SIZE;
 use crate::{GameState, FPS};
 use bevy::prelude::*;
@@ -85,26 +89,9 @@ pub fn spawn_players(
             },
             FireballReady(false),
             RoundComponent,
-            MoveDir(Vec2::X),
+            PlayerControls::default(),
             rip.next(),
         ));
-    }
-}
-
-pub fn exit_to_menu(
-    inputs: Res<PlayerInputs<GGRSConfig>>,
-    mut state: ResMut<NextState<GameState>>,
-) {
-    for (handle, input) in inputs.iter().enumerate() {
-        match input.1 {
-            InputStatus::Confirmed => {
-                if input.0.input == INPUT_EXIT {
-                    info!("Player {} exiting", handle);
-                    state.set(GameState::MenuMain)
-                }
-            }
-            _ => {}
-        }
     }
 }
 
@@ -117,38 +104,18 @@ pub fn despawn_players(mut commands: Commands, query: Query<Entity, With<RoundCo
     }
 }
 
-pub fn move_players(
+pub fn apply_inputs(
+    mut query: Query<(&mut PlayerControls, &Player)>,
     inputs: Res<PlayerInputs<GGRSConfig>>,
-    walls: Query<&Transform, (With<TileCollider>, Without<Player>)>,
-    mut players: Query<
-        (
-            &mut Transform,
-            &mut TextureAtlasSprite,
-            &mut Player,
-            &mut MoveDir,
-        ),
-        With<Rollback>,
-    >,
 ) {
-    // loop over all players and apply their inputs to movement
-    // do NOT return early because we need to check all players for input/movement
-    for (mut transform, mut sprite, mut player, mut move_dir) in players.iter_mut() {
-        // reset just_moved each frame
-        player.just_moved = false;
-        if !player.active {
-            continue; // don't return, we need to check other players for movement
-        }
-
-        let input = match inputs[player.handle].1 {
-            InputStatus::Confirmed => inputs[player.handle].0.input,
-            InputStatus::Predicted => inputs[player.handle].0.input,
+    for (mut pc, p) in query.iter_mut() {
+        let input = match inputs[p.handle].1 {
+            InputStatus::Confirmed => inputs[p.handle].0.input,
+            InputStatus::Predicted => inputs[p.handle].0.input,
             InputStatus::Disconnected => 0, // disconnected players do nothing
         };
-        if input == 0 {
-            continue; // don't return, we need to check other players for movement
-        }
 
-        let mut direction = Vec3::ZERO;
+        let mut direction = Vec2::ZERO;
         if input & INPUT_UP != 0 {
             direction.y += 1.;
         }
@@ -161,30 +128,61 @@ pub fn move_players(
         if input & INPUT_LEFT != 0 {
             direction.x -= 1.;
         }
+        pc.dir = direction.normalize_or_zero();
+
+        if input & INPUT_FIRE != 0 {
+            pc.shooting = true;
+        } else {
+            pc.shooting = false;
+        }
         if input & INPUT_SPRINT != 0 {
-            if player.sprint_ready && player.speed <= PLAYER_SPEED_MAX {
-                player.speed += 50.0;
-                player.sprint_ammo -= 1;
-                if player.sprint_ammo == 0 {
-                    player.sprint_ready = false;
-                }
+            pc.sprinting = true;
+        } else {
+            pc.sprinting = false;
+        }
+
+        if input & INPUT_EXIT != 0 {
+            pc.exiting = true;
+        } else {
+            pc.exiting = false;
+        }
+    }
+}
+
+pub fn move_players(
+    walls: Query<&Transform, (With<TileCollider>, Without<Player>)>,
+    mut players: Query<
+        (
+            &mut Transform,
+            &mut TextureAtlasSprite,
+            &mut Player,
+            &PlayerControls,
+        ),
+        With<Rollback>,
+    >,
+) {
+    // loop over all players and apply their inputs to movement
+    // do NOT return early because we need to check all players for input/movement
+    for (mut transform, mut sprite, mut player, controls) in players.iter_mut() {
+        // reset just_moved each frame
+        player.just_moved = false;
+        if !player.active {
+            continue; // don't return, we need to check other players for movement
+        }
+
+        if controls.sprinting && player.sprint_ready && player.speed <= PLAYER_SPEED_MAX {
+            player.speed += PLAYER_SPEED_SPRINT;
+            player.sprint_ammo -= 1;
+            if player.sprint_ammo == 0 {
+                player.sprint_ready = false;
             }
         } else {
             if player.speed > PLAYER_SPEED_START {
                 player.speed -= 1.;
             }
         }
-        if direction == Vec3::ZERO {
-            continue; // don't return, we need to check other players for movement
-        }
-        // make sure we don't move faster diagonally than up/down
-        direction = direction.normalize_or_zero();
 
-        // set player MoveDir to the same direction for firing fireballs
-        move_dir.0 = Vec2::new(direction.x, direction.y);
-
-        let movement = (direction * player.speed / FPS as f32).extend(0.);
-
+        let movement = (controls.dir * player.speed / FPS as f32).extend(0.);
         if movement.x != 0. {
             player.just_moved = true;
             if movement.x > 0. {
@@ -343,17 +341,9 @@ pub fn player_ate_chili_pepper_system(
 }
 
 // reload_fireball prevents the player from continuously shooting fireballs by holding INPUT_FIRE
-pub fn reload_fireballs(
-    inputs: Res<PlayerInputs<GGRSConfig>>,
-    mut query: Query<(&mut FireballReady, &Player)>,
-) {
-    for (mut can_fire, player) in query.iter_mut() {
-        let input = match inputs[player.handle].1 {
-            InputStatus::Confirmed => inputs[player.handle].0.input,
-            InputStatus::Predicted => inputs[player.handle].0.input,
-            InputStatus::Disconnected => 0, // disconnected players do nothing
-        };
-        if !input & INPUT_FIRE != 0 && player.fire_ball_ammo > 0 {
+pub fn reload_fireballs(mut query: Query<(&mut FireballReady, &Player, &PlayerControls)>) {
+    for (mut can_fire, player, controls) in query.iter_mut() {
+        if !controls.shooting && player.fire_ball_ammo > 0 {
             can_fire.0 = true;
         }
     }
@@ -362,25 +352,15 @@ pub fn reload_fireballs(
 pub fn shoot_fireballs(
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
-    inputs: Res<PlayerInputs<GGRSConfig>>,
     images: Res<TextureAssets>,
-    mut player_query: Query<(&Transform, &mut Player, &MoveDir, &mut FireballReady)>,
+    mut player_query: Query<(&Transform, &mut Player, &PlayerControls, &mut FireballReady)>,
 ) {
-    for (transform, mut player, move_dir, mut fireball_ready) in player_query.iter_mut() {
+    for (transform, mut player, controls, mut fireball_ready) in player_query.iter_mut() {
         if !player.active {
             continue; // don't let dead/inactive players continue firing
         }
 
-        let input = match inputs[player.handle].1 {
-            InputStatus::Confirmed => inputs[player.handle].0.input,
-            InputStatus::Predicted => inputs[player.handle].0.input,
-            InputStatus::Disconnected => 0, // disconnected players do nothing
-        };
-        if input == 0 {
-            continue; // don't return, we need to check other players for movement
-        }
-
-        if input & INPUT_FIRE != 0 {
+        if controls.shooting {
             if !fireball_ready.0 || player.fire_ball_ammo == 0 {
                 // fireball not ready or player out of ammo
                 continue;
@@ -389,13 +369,13 @@ pub fn shoot_fireballs(
             // position fireball slightly away from players position
             let player_pos = transform.translation;
             let pos = player_pos
-                + (Vec3::new(move_dir.0.x, move_dir.0.y, 0.)) * (TILE_SIZE * 1.5)
+                + (Vec3::new(controls.dir.x, controls.dir.y, 0.)) * (TILE_SIZE * 1.5)
                 + FIREBALL_RADIUS;
 
             commands.spawn((
                 Name::new("Fireball"),
                 Fireball {
-                    move_dir: move_dir.0,
+                    move_dir: controls.dir,
                     shot_by: player.handle,
                     speed: player.speed,
                 },
@@ -403,7 +383,7 @@ pub fn shoot_fireballs(
                 RoundComponent,
                 SpriteBundle {
                     transform: Transform::from_xyz(pos.x, pos.y, 1.)
-                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, move_dir.0)),
+                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.dir)),
                     texture: images.texture_fireball.clone(),
                     ..default()
                 },
@@ -451,17 +431,18 @@ pub fn kill_players(
 ) {
     for (mut player, mut animation, mut sprite, player_transform) in player_query.iter_mut() {
         for (entity, fireball_transform, fireball) in fireball_query.iter() {
-            let distance = player_transform
-                .translation
-                .distance(fireball_transform.translation);
-
             if fireball.shot_by == player.handle {
                 continue; // don't allow player to suicide
             };
 
+            let distance = player_transform
+                .translation
+                .distance(fireball_transform.translation);
+
             if distance < TILE_SIZE + FIREBALL_RADIUS {
-                player.health -= FIREBALL_DAMAGE;
-                if player.health <= 0. {
+                if player.health >= FIREBALL_DAMAGE {
+                    player.health -= FIREBALL_DAMAGE
+                } else {
                     animation.timer.set_mode(TimerMode::Once);
                     sprite.flip_y = true;
                     player.active = false;

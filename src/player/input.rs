@@ -2,16 +2,6 @@ use bevy::prelude::*;
 use bevy_ggrs::*;
 use bevy_matchbox::matchbox_socket::PeerId;
 use bytemuck::{Pod, Zeroable};
-use rand::rngs::StdRng;
-use rand_seeder::Seeder;
-
-pub struct NetworkPlugin;
-
-impl Plugin for NetworkPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_system(increase_frame_system.in_schedule(GGRSSchedule));
-    }
-}
 
 #[derive(Debug)]
 pub struct GGRSConfig;
@@ -21,23 +11,13 @@ impl ggrs::Config for GGRSConfig {
     type Address = PeerId;
 }
 
-#[derive(Resource)]
-pub struct AgreedRandom {
-    pub rng: StdRng,
-}
+#[derive(Default, Reflect, Component)]
 
-pub fn new_agreed_random(peers: Vec<PeerId>) -> AgreedRandom {
-    let mut tmp = peers.clone();
-    tmp.sort();
-    let seed = tmp.iter().fold(String::new(), |mut a, b| {
-        a.reserve(b.0.to_string().len() + 1);
-        a.push_str(b.0.to_string().as_str());
-        a.push_str(" ");
-        a.trim_end().to_string()
-    });
-    let rng: StdRng = Seeder::from(seed).make_rng();
-
-    AgreedRandom { rng }
+pub struct PlayerControls {
+    pub dir: Vec2,
+    pub exiting: bool,
+    pub shooting: bool,
+    pub sprinting: bool,
 }
 
 #[repr(C)]
@@ -80,25 +60,4 @@ pub fn input(_: In<ggrs::PlayerHandle>, keys: Res<Input<KeyCode>>) -> PlayerInpu
     }
 
     PlayerInput { input }
-}
-
-pub fn log_ggrs_events(mut session: ResMut<Session<GGRSConfig>>) {
-    match session.as_mut() {
-        Session::P2PSession(s) => {
-            for event in s.events() {
-                info!("GGRS Event: {:?}", event);
-            }
-        }
-        _ => (),
-    }
-}
-
-#[derive(Resource, Default, Reflect, Hash)]
-#[reflect(Resource, Hash)]
-pub struct FrameCount {
-    pub frame: u32,
-}
-
-pub fn increase_frame_system(mut frame_count: ResMut<FrameCount>) {
-    frame_count.frame += 1;
 }

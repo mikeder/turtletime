@@ -1,3 +1,5 @@
 pub mod components;
+pub mod input;
 pub mod plugin;
-mod systems;
+pub mod resources;
+pub mod systems;
