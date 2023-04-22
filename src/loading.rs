@@ -63,6 +63,8 @@ pub struct TextureAssets {
     pub texture_dirt: Handle<Image>,
     #[asset(path = "textures/grass.png")]
     pub texture_grass: Handle<Image>,
+    #[asset(path = "textures/leftfence.png")]
+    pub texture_fenceleft: Handle<Image>,
     #[asset(path = "textures/fencebottom.png")]
     pub texture_fencebottom: Handle<Image>,
     #[asset(path = "textures/fencetop.png")]

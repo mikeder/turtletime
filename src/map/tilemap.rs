@@ -67,6 +67,8 @@ impl TileMapPlugin {
             }
             for (x, char) in line.chars().enumerate() {
                 let texture = match char {
+                    // left fence
+                    '|' => textures.texture_fenceleft.clone(),
                     // bottom fence
                     '_' => textures.texture_fencebottom.clone(),
                     // top fence
