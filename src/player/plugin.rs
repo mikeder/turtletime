@@ -1,5 +1,4 @@
 use super::checksum::checksum_players;
-use super::components::EdibleSpawnTimer;
 use crate::player::systems::*;
 use crate::GameState;
 use bevy::prelude::*;
@@ -11,7 +10,7 @@ pub struct PlayerPlugin;
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<EdibleSpawnTimer>()
+        app.add_system(init_round.before(create_ui))
             .add_system(create_ui.in_schedule(OnEnter(GameState::RoundLocal)))
             .add_system(create_ui.in_schedule(OnEnter(GameState::RoundOnline)))
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))

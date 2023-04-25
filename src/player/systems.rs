@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use super::checksum::Checksum;
 use super::components::{
     ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
@@ -30,6 +28,10 @@ use bevy_ggrs::RollbackIdProvider;
 use bevy_ggrs::Session;
 use ggrs::InputStatus;
 use rand::Rng;
+
+pub fn init_round(mut commands: Commands) {
+    commands.init_resource::<EdibleSpawnTimer>();
+}
 
 pub fn create_ui(
     mut commands: Commands,
