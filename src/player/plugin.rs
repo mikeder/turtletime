@@ -1,3 +1,4 @@
+use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
 use crate::player::systems::*;
 use crate::GameState;
@@ -19,22 +20,25 @@ impl Plugin for PlayerPlugin {
             .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
             // fireball timers only used for despawn of old fireballs
             .add_system(tick_fireball_timers)
+            .add_system(check_win_state)
             // these systems will be executed as part of the advance frame update
             .add_systems(
                 (
                     apply_inputs,
+                    apply_player_sprint,
                     move_players,
+                    checksum_players,
                     shoot_fireballs,
                     reload_fireballs,
                     move_fireballs,
+                    damage_players,
                     kill_players,
-                    tick_edible_timer,
                     spawn_strawberry_over_time,
                     spawn_chili_pepper_over_time,
                     player_ate_chili_pepper_system,
                     player_ate_strawberry_system,
-                    check_win_state,
                     despawn_old_fireballs,
+                    tick_edible_timer,
                 )
                     .chain()
                     .in_schedule(GGRSSchedule),

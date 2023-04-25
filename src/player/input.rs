@@ -15,6 +15,7 @@ impl ggrs::Config for GGRSConfig {
 
 pub struct PlayerControls {
     pub dir: Vec2,
+    pub last_dir: Vec2,
     pub exiting: bool,
     pub shooting: bool,
     pub sprinting: bool,

@@ -3,20 +3,21 @@ use bevy_inspector_egui::prelude::*;
 use bevy_inspector_egui::InspectorOptions;
 
 pub const CHILI_PEPPER_SIZE: f32 = 20.0;
-pub const CHILI_PEPPER_AMMO_COUNT: usize = 5;
+pub const CHILI_PEPPER_AMMO_COUNT: i32 = 5;
 const CHILI_PEPPER_SPAWN_RATE: f32 = 3.5;
 
 pub const FIREBALL_RADIUS: f32 = 12.0;
-pub const FIREBALL_DAMAGE: usize = 5;
+pub const FIREBALL_DAMAGE: i32 = 5;
 pub const FIREBALL_LIFETIME: f32 = 10.0;
 
 pub const STRAWBERRY_SIZE: f32 = 32.0;
+pub const STRAWBERRY_AMMO_COUNT: i32 = 5;
 const STRAWBERRY_SPAWN_RATE: f32 = 2.5;
 
-pub const PLAYER_HEALTH_MAX: usize = 100;
-pub const PLAYER_SPEED_START: f32 = 100.;
-pub const PLAYER_SPEED_SPRINT: f32 = 50.;
-pub const PLAYER_SPEED_MAX: f32 = 1000.;
+pub const PLAYER_HEALTH_MAX: i32 = 100;
+pub const PLAYER_SPEED_START: i32 = 100;
+pub const PLAYER_SPEED_BOOST: i32 = 25;
+pub const PLAYER_SPEED_MAX: i32 = 800;
 
 #[derive(Component)]
 pub struct RoundComponent;
@@ -24,8 +25,13 @@ pub struct RoundComponent;
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct Fireball {
-    pub move_dir: Vec2,
     pub shot_by: usize,
+}
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct FireballMovement {
+    pub dir: Vec2,
     pub speed: f32,
 }
 
@@ -42,9 +48,6 @@ impl Default for FireballTimer {
         }
     }
 }
-
-#[derive(Component, Reflect, Default)]
-pub struct FireballReady(pub bool);
 
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
@@ -68,32 +71,58 @@ pub struct ChiliPepper;
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
+pub struct FireballAmmo(pub i32);
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct FireballReady(pub bool);
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
 pub struct Strawberry;
 
 #[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]
 pub struct Player {
     pub active: bool,
-    pub fire_ball_ammo: usize,
-    pub sprint_ready: bool,
-    pub sprint_ammo: usize,
     pub handle: usize,
-    pub health: usize,
-    pub just_moved: bool,
-    pub speed: f32,
+}
+
+#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
+#[reflect(Component, InspectorOptions)]
+pub struct PlayerSpeed(pub i32);
+
+impl Default for PlayerSpeed {
+    fn default() -> Self {
+        PlayerSpeed(PLAYER_SPEED_START)
+    }
+}
+
+#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
+#[reflect(Component, InspectorOptions)]
+pub struct PlayerSpeedBoost(pub i32);
+
+impl Default for PlayerSpeedBoost {
+    fn default() -> Self {
+        PlayerSpeedBoost(0)
+    }
+}
+
+#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
+#[reflect(Component, InspectorOptions)]
+pub struct PlayerHealth(pub i32);
+
+impl Default for PlayerHealth {
+    fn default() -> Self {
+        PlayerHealth(PLAYER_HEALTH_MAX)
+    }
 }
 
 impl Default for Player {
     fn default() -> Self {
         Player {
             active: true,
-            fire_ball_ammo: 0,
-            sprint_ready: false,
-            sprint_ammo: 0,
             handle: 0,
-            health: PLAYER_HEALTH_MAX,
-            just_moved: false,
-            speed: PLAYER_SPEED_START,
         }
     }
 }

@@ -1,7 +1,10 @@
+use super::checksum::Checksum;
 use super::components::{
-    ChiliPepper, EdibleSpawnTimer, Fireball, FireballReady, FireballTimer, Player, RoundComponent,
-    Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
-    PLAYER_SPEED_MAX, PLAYER_SPEED_SPRINT, PLAYER_SPEED_START, STRAWBERRY_SIZE,
+    ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
+    FireballTimer, Player, PlayerHealth, PlayerSpeed, PlayerSpeedBoost, RoundComponent, Strawberry,
+    CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
+    PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START, STRAWBERRY_AMMO_COUNT,
+    STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -87,15 +90,21 @@ pub fn spawn_players(
                 handle,
                 ..Default::default()
             },
+            FireballAmmo(0),
             FireballReady(false),
-            RoundComponent,
             PlayerControls::default(),
+            PlayerHealth::default(),
+            PlayerSpeed::default(),
+            PlayerSpeedBoost::default(),
+            Checksum::default(),
+            RoundComponent,
             rip.next(),
         ));
     }
 }
 
 pub fn despawn_players(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
+    commands.remove_resource::<AgreedRandom>();
     commands.remove_resource::<LocalHandle>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
@@ -130,6 +139,10 @@ pub fn apply_inputs(
         }
         pc.dir = direction.normalize_or_zero();
 
+        if direction != Vec2::ZERO {
+            pc.last_dir = direction
+        }
+
         if input & INPUT_FIRE != 0 {
             pc.shooting = true;
         } else {
@@ -149,6 +162,24 @@ pub fn apply_inputs(
     }
 }
 
+pub fn apply_player_sprint(
+    mut players: Query<
+        (&mut PlayerSpeed, &mut PlayerSpeedBoost, &PlayerControls),
+        (With<Player>, With<Rollback>),
+    >,
+) {
+    for (mut speed, mut boost, controls) in players.iter_mut() {
+        if controls.sprinting && boost.0 > 0 && speed.0 <= PLAYER_SPEED_MAX {
+            speed.0 += PLAYER_SPEED_BOOST;
+            boost.0 -= 1;
+        } else {
+            if speed.0 > PLAYER_SPEED_START {
+                speed.0 -= 1;
+            }
+        }
+    }
+}
+
 pub fn move_players(
     walls: Query<&Transform, (With<TileCollider>, Without<Player>)>,
     mut players: Query<
@@ -156,6 +187,7 @@ pub fn move_players(
             &mut Transform,
             &mut TextureAtlasSprite,
             &mut Player,
+            &PlayerSpeed,
             &PlayerControls,
         ),
         With<Rollback>,
@@ -163,28 +195,13 @@ pub fn move_players(
 ) {
     // loop over all players and apply their inputs to movement
     // do NOT return early because we need to check all players for input/movement
-    for (mut transform, mut sprite, mut player, controls) in players.iter_mut() {
-        // reset just_moved each frame
-        player.just_moved = false;
+    for (mut transform, mut sprite, player, speed, controls) in players.iter_mut() {
         if !player.active {
             continue; // don't return, we need to check other players for movement
         }
 
-        if controls.sprinting && player.sprint_ready && player.speed <= PLAYER_SPEED_MAX {
-            player.speed += PLAYER_SPEED_SPRINT;
-            player.sprint_ammo -= 1;
-            if player.sprint_ammo == 0 {
-                player.sprint_ready = false;
-            }
-        } else {
-            if player.speed > PLAYER_SPEED_START {
-                player.speed -= 1.;
-            }
-        }
-
-        let movement = (controls.dir * player.speed / FPS as f32).extend(0.);
+        let movement = (controls.dir * speed.0 as f32 / FPS as f32).extend(0.);
         if movement.x != 0. {
-            player.just_moved = true;
             if movement.x > 0. {
                 // moving to the right
                 sprite.flip_x = false
@@ -194,18 +211,12 @@ pub fn move_players(
                 sprite.flip_x = true
             }
         }
-        if movement.y != 0. {
-            player.just_moved = true;
-        }
 
         let target = transform.translation + Vec3::new(0.0, movement.y, 0.0);
         if !walls
             .iter()
             .any(|&transform| wall_collision_check(target, transform.translation))
         {
-            if movement.y != 0.0 {
-                player.just_moved = true;
-            }
             transform.translation = target;
         }
 
@@ -215,7 +226,6 @@ pub fn move_players(
             .any(|&transform| wall_collision_check(target, transform.translation))
         {
             if movement.x != 0.0 {
-                player.just_moved = true;
                 if movement.x > 0.0 {
                     sprite.flip_x = false;
                 } else {
@@ -271,10 +281,9 @@ pub fn spawn_strawberry_over_time(
 }
 
 // TODO: add sound
-// TODO: build sprint
 pub fn player_ate_strawberry_system(
     mut commands: Commands,
-    mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
+    mut player_query: Query<(&Transform, &mut PlayerSpeedBoost), With<Player>>,
     strawberry_query: Query<(Entity, &Transform), (With<Strawberry>, With<Rollback>)>,
 ) {
     for (pt, mut p) in player_query.iter_mut() {
@@ -282,8 +291,7 @@ pub fn player_ate_strawberry_system(
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + STRAWBERRY_SIZE / 2.0 {
-                p.sprint_ammo += 1;
-                p.sprint_ready = true;
+                p.0 += STRAWBERRY_AMMO_COUNT;
                 commands.entity(s).despawn_recursive();
             }
         }
@@ -325,15 +333,15 @@ pub fn spawn_chili_pepper_over_time(
 // TODO: add sound
 pub fn player_ate_chili_pepper_system(
     mut commands: Commands,
-    mut player_query: Query<(&Transform, &mut Player), Without<Fireball>>,
+    mut player_query: Query<(&Transform, &mut FireballAmmo), (With<Player>, Without<Fireball>)>,
     pepper_query: Query<(Entity, &Transform), (With<ChiliPepper>, With<Rollback>)>,
 ) {
-    for (pt, mut p) in player_query.iter_mut() {
+    for (pt, mut ammo) in player_query.iter_mut() {
         for (s, st) in pepper_query.iter() {
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + CHILI_PEPPER_SIZE / 2.0 {
-                p.fire_ball_ammo += CHILI_PEPPER_AMMO_COUNT;
+                ammo.0 += CHILI_PEPPER_AMMO_COUNT;
                 commands.entity(s).despawn_recursive();
             }
         }
@@ -341,10 +349,10 @@ pub fn player_ate_chili_pepper_system(
 }
 
 // reload_fireball prevents the player from continuously shooting fireballs by holding INPUT_FIRE
-pub fn reload_fireballs(mut query: Query<(&mut FireballReady, &Player, &PlayerControls)>) {
-    for (mut can_fire, player, controls) in query.iter_mut() {
-        if !controls.shooting && player.fire_ball_ammo > 0 {
-            can_fire.0 = true;
+pub fn reload_fireballs(mut query: Query<(&mut FireballReady, &FireballAmmo, &PlayerControls)>) {
+    for (mut ready, ammo, controls) in query.iter_mut() {
+        if !controls.shooting && ammo.0 > 0 {
+            ready.0 = true;
         }
     }
 }
@@ -353,15 +361,22 @@ pub fn shoot_fireballs(
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
     images: Res<TextureAssets>,
-    mut player_query: Query<(&Transform, &mut Player, &PlayerControls, &mut FireballReady)>,
+    mut player_query: Query<(
+        &Transform,
+        &mut FireballAmmo,
+        &mut FireballReady,
+        &PlayerControls,
+        &PlayerSpeed,
+        &Player,
+    )>,
 ) {
-    for (transform, mut player, controls, mut fireball_ready) in player_query.iter_mut() {
+    for (transform, mut ammo, mut ready, controls, speed, player) in player_query.iter_mut() {
         if !player.active {
-            continue; // don't let dead/inactive players continue firing
+            continue; // prevent dead players from shooting
         }
 
         if controls.shooting {
-            if !fireball_ready.0 || player.fire_ball_ammo == 0 {
+            if !ready.0 || ammo.0 == 0 {
                 // fireball not ready or player out of ammo
                 continue;
             }
@@ -375,30 +390,34 @@ pub fn shoot_fireballs(
             commands.spawn((
                 Name::new("Fireball"),
                 Fireball {
-                    move_dir: controls.dir,
                     shot_by: player.handle,
-                    speed: player.speed,
+                },
+                FireballMovement {
+                    speed: speed.0 as f32,
+                    dir: controls.last_dir,
                 },
                 FireballTimer::default(),
                 RoundComponent,
                 SpriteBundle {
                     transform: Transform::from_xyz(pos.x, pos.y, 1.)
-                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.dir)),
+                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
                     texture: images.texture_fireball.clone(),
                     ..default()
                 },
                 rip.next(),
             ));
 
-            player.fire_ball_ammo -= 1;
-            fireball_ready.0 = false;
+            ammo.0 -= 1;
+            ready.0 = false;
         }
     }
 }
 
-pub fn move_fireballs(mut query: Query<(&mut Transform, &Fireball), With<Rollback>>) {
-    for (mut transform, fireball) in query.iter_mut() {
-        transform.translation += (fireball.move_dir * (fireball.speed * 0.05)).extend(0.);
+pub fn move_fireballs(
+    mut query: Query<(&mut Transform, &FireballMovement), (With<Fireball>, With<Rollback>)>,
+) {
+    for (mut transform, movement) in query.iter_mut() {
+        transform.translation += (movement.dir * (movement.speed * 0.05)).extend(0.);
     }
 }
 
@@ -416,39 +435,48 @@ pub fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &
     }
 }
 
-pub fn kill_players(
+pub fn damage_players(
     mut commands: Commands,
     mut player_query: Query<
-        (
-            &mut Player,
-            &mut FrameAnimation,
-            &mut TextureAtlasSprite,
-            &Transform,
-        ),
-        (With<Player>, Without<Fireball>),
+        (&mut PlayerHealth, &Transform, &Player),
+        (With<Rollback>, Without<Fireball>),
     >,
     fireball_query: Query<(Entity, &Transform, &Fireball), With<Rollback>>,
 ) {
-    for (mut player, mut animation, mut sprite, player_transform) in player_query.iter_mut() {
+    for (mut health, transform, player) in player_query.iter_mut() {
         for (entity, fireball_transform, fireball) in fireball_query.iter() {
             if fireball.shot_by == player.handle {
                 continue; // don't allow player to suicide
             };
 
-            let distance = player_transform
+            let distance = transform
                 .translation
                 .distance(fireball_transform.translation);
 
             if distance < TILE_SIZE + FIREBALL_RADIUS {
-                if player.health >= FIREBALL_DAMAGE {
-                    player.health -= FIREBALL_DAMAGE
-                } else {
-                    animation.timer.set_mode(TimerMode::Once);
-                    sprite.flip_y = true;
-                    player.active = false;
-                }
-                commands.entity(entity).despawn_recursive();
+                health.0 -= FIREBALL_DAMAGE;
+                commands.entity(entity).despawn_recursive(); // despawn fireball
             }
+        }
+    }
+}
+
+pub fn kill_players(
+    mut player_query: Query<
+        (
+            &mut Player,
+            &PlayerHealth,
+            &mut FrameAnimation,
+            &mut TextureAtlasSprite,
+        ),
+        (With<Player>, Without<Fireball>),
+    >,
+) {
+    for (mut player, health, mut animation, mut sprite) in player_query.iter_mut() {
+        if health.0 <= 0 {
+            animation.timer.set_mode(TimerMode::Once);
+            sprite.flip_y = true;
+            player.active = false;
         }
     }
 }
