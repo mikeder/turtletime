@@ -1,10 +1,10 @@
 use super::checksum::Checksum;
 use super::components::{
     ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Player, PlayerHealth, PlayerSpeed, PlayerSpeedBoost, RoundComponent, Strawberry,
-    CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
-    PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START, STRAWBERRY_AMMO_COUNT,
-    STRAWBERRY_SIZE,
+    FireballTimer, Player, PlayerFireballText, PlayerHealth, PlayerHealthText, PlayerSpeed,
+    PlayerSpeedBoost, PlayerSpeedBoostText, RoundComponent, Strawberry, CHILI_PEPPER_AMMO_COUNT,
+    CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS, PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX,
+    PLAYER_SPEED_START, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -45,7 +45,7 @@ pub fn create_ui(
 
     commands.spawn((Camera2dBundle::default(), RoundComponent));
 
-    let text = format!("Player {}", player_handle);
+    let player_name = format!("Player {}", player_handle);
 
     // root node
     commands
@@ -71,7 +71,7 @@ pub fn create_ui(
         .with_children(|parent| {
             parent.spawn(TextBundle {
                 text: Text::from_section(
-                    text,
+                    player_name,
                     TextStyle {
                         font: font_assets.fira_sans.clone(),
                         font_size: 50.0,
@@ -80,8 +80,113 @@ pub fn create_ui(
                 ),
                 ..Default::default()
             });
+            parent
+                .spawn(TextBundle {
+                    text: Text::from_section(
+                        "",
+                        TextStyle {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            color: Color::GOLD,
+                        },
+                    ),
+                    ..Default::default()
+                })
+                .insert(PlayerHealthText);
+            parent
+                .spawn(TextBundle {
+                    text: Text::from_section(
+                        "",
+                        TextStyle {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            color: Color::GOLD,
+                        },
+                    ),
+                    ..Default::default()
+                })
+                .insert(PlayerFireballText);
+            parent
+                .spawn(TextBundle {
+                    text: Text::from_section(
+                        "",
+                        TextStyle {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            color: Color::GOLD,
+                        },
+                    ),
+                    ..Default::default()
+                })
+                .insert(PlayerSpeedBoostText);
         })
         .insert(RoundComponent);
+}
+
+pub fn update_player_health_text(
+    player_handle: Option<Res<LocalHandle>>,
+    mut text_query: Query<&mut Text, With<PlayerHealthText>>,
+    player_query: Query<(&Player, &PlayerHealth), Without<Fireball>>,
+) {
+    let player_handle = match player_handle {
+        Some(handle) => handle.0,
+        None => return, // Session hasn't started yet
+    };
+
+    for (player, health) in player_query.iter() {
+        if player.handle != player_handle {
+            continue;
+        }
+
+        for mut text in text_query.iter_mut() {
+            let val = format!("Health: {}", health.0);
+            text.sections[0].value = val;
+        }
+    }
+}
+
+pub fn update_player_fireball_text(
+    player_handle: Option<Res<LocalHandle>>,
+    mut text_query: Query<&mut Text, With<PlayerFireballText>>,
+    player_query: Query<(&Player, &FireballAmmo), Without<Fireball>>,
+) {
+    let player_handle = match player_handle {
+        Some(handle) => handle.0,
+        None => return, // Session hasn't started yet
+    };
+
+    for (player, ammo) in player_query.iter() {
+        if player.handle != player_handle {
+            continue;
+        }
+
+        for mut text in text_query.iter_mut() {
+            let val = format!("Fireballs: {}", ammo.0);
+            text.sections[0].value = val;
+        }
+    }
+}
+
+pub fn update_player_speed_boost_text(
+    player_handle: Option<Res<LocalHandle>>,
+    mut text_query: Query<&mut Text, With<PlayerSpeedBoostText>>,
+    player_query: Query<(&Player, &PlayerSpeedBoost), Without<Fireball>>,
+) {
+    let player_handle = match player_handle {
+        Some(handle) => handle.0,
+        None => return, // Session hasn't started yet
+    };
+
+    for (player, boost) in player_query.iter() {
+        if player.handle != player_handle {
+            continue;
+        }
+
+        for mut text in text_query.iter_mut() {
+            let val = format!("Boost: {}", boost.0);
+            text.sections[0].value = val;
+        }
+    }
 }
 
 pub fn camera_follow(
@@ -548,7 +653,7 @@ pub fn check_win_state(
     }
     if remaning_active.len() == 1 {
         let result = format!("Player {} wins the round!", remaning_active[0].handle);
-        commands.insert_resource(MatchData { result });
-        next_state.set(GameState::Win)
+        next_state.set(GameState::Win);
+        commands.insert_resource(MatchData { result })
     }
 }

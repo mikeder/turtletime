@@ -22,6 +22,9 @@ impl Plugin for PlayerPlugin {
             // fireball timers only used for despawn of old fireballs
             .add_system(tick_fireball_timers)
             .add_system(check_win_state)
+            .add_system(update_player_health_text)
+            .add_system(update_player_fireball_text)
+            .add_system(update_player_speed_boost_text)
             // these systems will be executed as part of the advance frame update
             .add_systems(
                 (

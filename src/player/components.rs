@@ -118,6 +118,13 @@ impl Default for PlayerHealth {
     }
 }
 
+#[derive(Component)]
+pub struct PlayerHealthText;
+#[derive(Component)]
+pub struct PlayerFireballText;
+#[derive(Component)]
+pub struct PlayerSpeedBoostText;
+
 impl Default for Player {
     fn default() -> Self {
         Player {
