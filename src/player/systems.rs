@@ -41,6 +41,8 @@ pub fn create_ui(
         None => return, // Session hasn't started yet
     };
 
+    commands.spawn((Camera2dBundle::default(), RoundComponent));
+
     let text = format!("Player {}", player_handle);
 
     // root node
@@ -76,7 +78,8 @@ pub fn create_ui(
                 ),
                 ..Default::default()
             });
-        });
+        })
+        .insert(RoundComponent);
 }
 
 pub fn camera_follow(
@@ -110,8 +113,6 @@ pub fn spawn_players(
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
 ) {
-    commands.spawn((Camera2dBundle::default(), RoundComponent));
-
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
@@ -153,8 +154,9 @@ pub fn spawn_players(
     }
 }
 
-pub fn despawn_players(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
+pub fn cleanup_round(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
     commands.remove_resource::<AgreedRandom>();
+    commands.remove_resource::<EdibleSpawnTimer>();
     commands.remove_resource::<LocalHandle>();
     commands.remove_resource::<Session<GGRSConfig>>();
 

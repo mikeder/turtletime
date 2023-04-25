@@ -16,8 +16,8 @@ impl Plugin for PlayerPlugin {
             .add_system(create_ui.in_schedule(OnEnter(GameState::RoundOnline)))
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
-            .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))
-            .add_system(despawn_players.in_schedule(OnExit(GameState::RoundOnline)))
+            .add_system(cleanup_round.in_schedule(OnExit(GameState::RoundLocal)))
+            .add_system(cleanup_round.in_schedule(OnExit(GameState::RoundOnline)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
             .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
             // fireball timers only used for despawn of old fireballs
