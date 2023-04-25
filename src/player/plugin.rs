@@ -12,6 +12,8 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<EdibleSpawnTimer>()
+            .add_system(create_ui.in_schedule(OnEnter(GameState::RoundLocal)))
+            .add_system(create_ui.in_schedule(OnEnter(GameState::RoundOnline)))
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundLocal)))
             .add_system(spawn_players.in_schedule(OnEnter(GameState::RoundOnline)))
             .add_system(despawn_players.in_schedule(OnExit(GameState::RoundLocal)))

@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use super::checksum::Checksum;
 use super::components::{
     ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
@@ -13,7 +15,7 @@ use super::input::{
 use super::resources::AgreedRandom;
 
 use crate::graphics::{CharacterSheet, FrameAnimation};
-use crate::loading::TextureAssets;
+use crate::loading::{FontAssets, TextureAssets};
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::online::PlayerCount;
@@ -28,6 +30,54 @@ use bevy_ggrs::RollbackIdProvider;
 use bevy_ggrs::Session;
 use ggrs::InputStatus;
 use rand::Rng;
+
+pub fn create_ui(
+    mut commands: Commands,
+    font_assets: Res<FontAssets>,
+    player_handle: Option<Res<LocalHandle>>,
+) {
+    let player_handle = match player_handle {
+        Some(handle) => handle.0,
+        None => return, // Session hasn't started yet
+    };
+
+    let text = format!("Player {}", player_handle);
+
+    // root node
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    left: Val::Auto,
+                    right: Val::Px(10.),
+                    top: Val::Px(10.),
+                    bottom: Val::Auto,
+                },
+                flex_direction: FlexDirection::Column,
+                align_content: AlignContent::Start,
+                align_items: AlignItems::Center,
+                align_self: AlignSelf::Center,
+                justify_content: JustifyContent::Center,
+                ..Default::default()
+            },
+            background_color: BackgroundColor(Color::NONE),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            parent.spawn(TextBundle {
+                text: Text::from_section(
+                    text,
+                    TextStyle {
+                        font: font_assets.fira_sans.clone(),
+                        font_size: 50.0,
+                        color: Color::GOLD,
+                    },
+                ),
+                ..Default::default()
+            });
+        });
+}
 
 pub fn camera_follow(
     player_handle: Option<Res<LocalHandle>>,
