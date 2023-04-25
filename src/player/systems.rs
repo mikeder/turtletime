@@ -16,7 +16,7 @@ use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::TextureAssets;
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
-use crate::menu::options::PlayerCount;
+use crate::menu::online::PlayerCount;
 use crate::menu::win::MatchData;
 use crate::TILE_SIZE;
 use crate::{GameState, FPS};

@@ -1,5 +1,4 @@
 use super::connect::ConnectData;
-use super::options::PlayerCount;
 use super::plugin::{
     BUTTON_TEXT, DISABLED_BUTTON, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION,
 };
@@ -7,15 +6,26 @@ use crate::loading::FontAssets;
 use crate::GameState;
 use bevy::prelude::*;
 
+const MIN_PLAYERS: usize = 1;
+const MAX_PLAYERS: usize = 8;
+
 #[derive(Component)]
 pub struct MenuOnlineUI;
 
 #[derive(Component)]
 pub enum MenuOnlineBtn {
+    PlayerCountUP,
+    PlayerCountDown,
     LobbyMatch,
     QuickMatch,
     Back,
 }
+
+#[derive(Resource)]
+pub struct PlayerCount(pub usize);
+
+#[derive(Component)]
+pub struct PlayerCountText;
 
 #[derive(Component)]
 pub struct ButtonEnabled(bool);
@@ -51,6 +61,134 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             ..Default::default()
         })
         .with_children(|parent| {
+            // player count buttons
+            parent
+                .spawn(TextBundle {
+                    text: Text {
+                        sections: vec![
+                            TextSection {
+                                value: "Player Count: ".to_owned(),
+                                style: TextStyle {
+                                    font: font_assets.fira_sans.clone(),
+                                    font_size: 40.0,
+                                    color: BUTTON_TEXT,
+                                },
+                            },
+                            TextSection {
+                                value: "".to_owned(),
+                                style: TextStyle {
+                                    font: font_assets.fira_sans.clone(),
+                                    font_size: 40.0,
+                                    color: BUTTON_TEXT,
+                                },
+                            },
+                        ],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .insert(PlayerCountText);
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        position_type: PositionType::Relative,
+                        flex_direction: FlexDirection::RowReverse,
+                        align_content: AlignContent::Center,
+                        align_items: AlignItems::Center,
+                        align_self: AlignSelf::Center,
+                        justify_content: JustifyContent::Center,
+                        ..Default::default()
+                    },
+                    background_color: BackgroundColor(Color::NONE),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent
+                        .spawn(ButtonBundle {
+                            style: Style {
+                                size: Size::new(Val::Px(100.0), Val::Px(65.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                margin: UiRect::all(Val::Px(16.)),
+                                padding: UiRect::all(Val::Px(16.)),
+                                ..Default::default()
+                            },
+                            background_color: BackgroundColor(NORMAL_BUTTON),
+                            ..Default::default()
+                        })
+                        .with_children(|parent| {
+                            parent.spawn(TextBundle {
+                                text: Text::from_section(
+                                    "+",
+                                    TextStyle {
+                                        font: font_assets.fira_sans.clone(),
+                                        font_size: 40.0,
+                                        color: BUTTON_TEXT,
+                                    },
+                                ),
+                                ..Default::default()
+                            });
+                        })
+                        .insert(MenuOnlineBtn::PlayerCountUP);
+
+                    parent
+                        .spawn(ButtonBundle {
+                            style: Style {
+                                size: Size::new(Val::Px(100.0), Val::Px(65.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                margin: UiRect::all(Val::Px(16.)),
+                                padding: UiRect::all(Val::Px(16.)),
+                                ..Default::default()
+                            },
+                            background_color: BackgroundColor(NORMAL_BUTTON),
+                            ..Default::default()
+                        })
+                        .with_children(|parent| {
+                            parent.spawn(TextBundle {
+                                text: Text::from_section(
+                                    "-",
+                                    TextStyle {
+                                        font: font_assets.fira_sans.clone(),
+                                        font_size: 40.0,
+                                        color: BUTTON_TEXT,
+                                    },
+                                ),
+                                ..Default::default()
+                            });
+                        })
+                        .insert(MenuOnlineBtn::PlayerCountDown);
+                });
+
+            // quick match button
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
+                        ..Default::default()
+                    },
+                    background_color: BackgroundColor(NORMAL_BUTTON),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle {
+                        text: Text::from_section(
+                            "Quick Match",
+                            TextStyle {
+                                font: font_assets.fira_sans.clone(),
+                                font_size: 40.0,
+                                color: BUTTON_TEXT,
+                            },
+                        ),
+                        ..Default::default()
+                    });
+                })
+                .insert(MenuOnlineBtn::QuickMatch);
+
             // lobby id text
             parent
                 .spawn(TextBundle {
@@ -113,35 +251,6 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 })
                 .insert(MenuOnlineBtn::LobbyMatch)
                 .insert(ButtonEnabled(false));
-
-            // quick match button
-            parent
-                .spawn(ButtonBundle {
-                    style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: UiRect::all(Val::Px(16.)),
-                        padding: UiRect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    background_color: BackgroundColor(NORMAL_BUTTON),
-                    ..Default::default()
-                })
-                .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text::from_section(
-                            "Quick Match",
-                            TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                        ),
-                        ..Default::default()
-                    });
-                })
-                .insert(MenuOnlineBtn::QuickMatch);
 
             // back button
             parent
@@ -252,7 +361,7 @@ pub fn btn_listeners(
     mut commands: Commands,
     mut state: ResMut<NextState<GameState>>,
     lobby_id: Res<LobbyID>,
-    player_count: Res<PlayerCount>,
+    mut player_count: ResMut<PlayerCount>,
     mut interaction_query: Query<
         (&Interaction, &MenuOnlineBtn, Option<&ButtonEnabled>),
         Changed<Interaction>,
@@ -270,6 +379,16 @@ pub fn btn_listeners(
 
         if let Interaction::Clicked = *interaction {
             match btn {
+                MenuOnlineBtn::PlayerCountUP => {
+                    if player_count.0 < MAX_PLAYERS {
+                        player_count.0 += 1
+                    }
+                }
+                MenuOnlineBtn::PlayerCountDown => {
+                    if player_count.0 > MIN_PLAYERS {
+                        player_count.0 -= 1
+                    }
+                }
                 MenuOnlineBtn::LobbyMatch => {
                     commands.insert_resource(ConnectData {
                         lobby_id: format!("turtletime_{}_{}", VERSION, lobby_id.0),
@@ -287,6 +406,15 @@ pub fn btn_listeners(
                 }
             }
         }
+    }
+}
+
+pub fn update_player_count_display(
+    player_count: ResMut<PlayerCount>,
+    mut query: Query<&mut Text, With<PlayerCountText>>,
+) {
+    for mut text in query.iter_mut() {
+        text.sections[1].value = player_count.0.clone().to_string();
     }
 }
 

@@ -1,4 +1,4 @@
-use super::options::PlayerCount;
+use super::online::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
 use crate::player::input::GGRSConfig;

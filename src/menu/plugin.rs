@@ -31,6 +31,7 @@ impl Plugin for MenuPlugin {
                     online::update_lobby_btn,
                     online::btn_visuals,
                     online::btn_listeners,
+                    online::update_player_count_display,
                 )
                     .in_set(OnUpdate(GameState::MenuOnline)),
             )
@@ -52,11 +53,7 @@ impl Plugin for MenuPlugin {
             // options menu
             .add_system(options::setup_ui.in_schedule(OnEnter(GameState::MenuOptions)))
             .add_systems(
-                (
-                    options::btn_visuals,
-                    options::btn_listeners,
-                    options::update_player_count_display,
-                )
+                (options::btn_visuals, options::btn_listeners)
                     .in_set(OnUpdate(GameState::MenuOptions)),
             )
             .add_system(options::cleanup_ui.in_schedule(OnExit(GameState::MenuOptions)))

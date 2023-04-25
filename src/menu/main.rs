@@ -1,5 +1,5 @@
 use super::connect::LocalHandle;
-use super::options::PlayerCount;
+use super::online::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION};
 use crate::loading::{FontAssets, TextureAssets};
 use crate::player::input::GGRSConfig;
