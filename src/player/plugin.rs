@@ -1,4 +1,5 @@
 use super::checksum::checksum_players;
+use super::components::EdibleSpawnTimer;
 use crate::player::systems::*;
 use crate::GameState;
 use bevy::prelude::*;
@@ -61,14 +62,14 @@ impl Plugin for PlayerPlugin {
         // edible rollback systems
         .add_systems(
             (
-                spawn_strawberry_over_time,
-                spawn_chili_pepper_over_time,
-                spawn_lettuce_over_time,
+                spawn_strawberry_over_time.run_if(resource_exists::<EdibleSpawnTimer>()),
+                spawn_chili_pepper_over_time.run_if(resource_exists::<EdibleSpawnTimer>()),
+                spawn_lettuce_over_time.run_if(resource_exists::<EdibleSpawnTimer>()),
+                tick_edible_timer.run_if(resource_exists::<EdibleSpawnTimer>()),
                 player_ate_chili_pepper_system,
                 player_ate_strawberry_system,
                 player_ate_lettuce_system,
                 despawn_old_fireballs,
-                tick_edible_timer,
             )
                 .chain()
                 .in_set(EdibleSystemSet)
