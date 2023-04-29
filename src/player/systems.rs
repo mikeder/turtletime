@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::checksum::Checksum;
 use super::components::{
     ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
@@ -405,9 +407,13 @@ pub fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> 
     collision.is_some()
 }
 
-pub fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>, time: Res<Time>) {
-    edible_spawn_timer.chili_pepper_timer.tick(time.delta());
-    edible_spawn_timer.strawberry_timer.tick(time.delta());
+pub fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>) {
+    edible_spawn_timer
+        .chili_pepper_timer
+        .tick(Duration::from_millis((FPS / 10) as u64));
+    edible_spawn_timer
+        .strawberry_timer
+        .tick(Duration::from_millis((FPS / 10) as u64));
 }
 
 pub fn spawn_strawberry_over_time(
