@@ -4,7 +4,7 @@ use bevy_inspector_egui::InspectorOptions;
 
 pub const CHILI_PEPPER_SIZE: f32 = 20.0;
 pub const CHILI_PEPPER_AMMO_COUNT: i32 = 5;
-const CHILI_PEPPER_SPAWN_RATE: f32 = 3.5;
+const CHILI_PEPPER_SPAWN_RATE: f32 = 2.5;
 
 pub const FIREBALL_RADIUS: f32 = 12.0;
 pub const FIREBALL_DAMAGE: i32 = 5;
@@ -12,9 +12,15 @@ pub const FIREBALL_LIFETIME: f32 = 10.0;
 
 pub const STRAWBERRY_SIZE: f32 = 32.0;
 pub const STRAWBERRY_AMMO_COUNT: i32 = 5;
-const STRAWBERRY_SPAWN_RATE: f32 = 2.5;
+const STRAWBERRY_SPAWN_RATE: f32 = 3.5;
+
+pub const LETTUCE_SIZE: f32 = 32.0;
+pub const LETTUCE_HEALTH_GAIN: i32 = 10;
+const LETTUCE_SPAWN_RATE: f32 = 5.;
 
 pub const PLAYER_HEALTH_MAX: i32 = 100;
+pub const PLAYER_HEALTH_MID: i32 = PLAYER_HEALTH_MAX / 2;
+pub const PLAYER_HEALTH_LOW: i32 = PLAYER_HEALTH_MAX / 4;
 pub const PLAYER_SPEED_START: i32 = 100;
 pub const PLAYER_SPEED_BOOST: i32 = 25;
 pub const PLAYER_SPEED_MAX: i32 = 800;
@@ -54,6 +60,7 @@ impl Default for FireballTimer {
 pub struct EdibleSpawnTimer {
     pub chili_pepper_timer: Timer,
     pub strawberry_timer: Timer,
+    pub lettuce_timer: Timer,
 }
 
 impl Default for EdibleSpawnTimer {
@@ -61,6 +68,7 @@ impl Default for EdibleSpawnTimer {
         EdibleSpawnTimer {
             chili_pepper_timer: Timer::from_seconds(CHILI_PEPPER_SPAWN_RATE, TimerMode::Repeating),
             strawberry_timer: Timer::from_seconds(STRAWBERRY_SPAWN_RATE, TimerMode::Repeating),
+            lettuce_timer: Timer::from_seconds(LETTUCE_SPAWN_RATE, TimerMode::Repeating),
         }
     }
 }
@@ -80,6 +88,10 @@ pub struct FireballReady(pub bool);
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct Strawberry;
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct Lettuce;
 
 #[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
 #[reflect(Component, InspectorOptions)]

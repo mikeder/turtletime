@@ -58,6 +58,8 @@ pub struct TextureAssets {
     pub texture_chili_pepper: Handle<Image>,
     #[asset(path = "textures/fireball.png")]
     pub texture_fireball: Handle<Image>,
+    #[asset(path = "textures/lettuce.png")]
+    pub texture_lettuce: Handle<Image>,
     // map textures
     #[asset(path = "textures/dirt.png")]
     pub texture_dirt: Handle<Image>,

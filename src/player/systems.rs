@@ -3,10 +3,12 @@ use std::time::Duration;
 use super::checksum::Checksum;
 use super::components::{
     ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Player, PlayerFireballText, PlayerHealth, PlayerHealthText, PlayerSpeed,
-    PlayerSpeedBoost, PlayerSpeedBoostText, RoundComponent, Strawberry, CHILI_PEPPER_AMMO_COUNT,
-    CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS, PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX,
-    PLAYER_SPEED_START, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
+    FireballTimer, Lettuce, Player, PlayerFireballText, PlayerHealth, PlayerHealthText,
+    PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText, RoundComponent, Strawberry,
+    CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
+    LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
+    PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START, STRAWBERRY_AMMO_COUNT,
+    STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -138,6 +140,15 @@ pub fn update_player_health_text(
 
         for mut text in text_query.iter_mut() {
             let val = format!("Health: {}", health.0);
+            let mut color = Color::GOLD;
+            if health.0 == PLAYER_HEALTH_MAX {
+                color = Color::GREEN
+            } else if health.0 <= PLAYER_HEALTH_MID && health.0 > PLAYER_HEALTH_LOW {
+                color = Color::ORANGE_RED
+            } else if health.0 <= PLAYER_HEALTH_LOW {
+                color = Color::RED
+            }
+            text.sections[0].style.color = color;
             text.sections[0].value = val;
         }
     }
@@ -408,12 +419,18 @@ pub fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> 
 }
 
 pub fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>) {
+    // use fixed duration tick delta to keep in sync with GGRSSchedule
+    let fixed_tick = (1000 / FPS) as u64;
+
     edible_spawn_timer
         .chili_pepper_timer
-        .tick(Duration::from_millis((FPS / 10) as u64));
+        .tick(Duration::from_millis(fixed_tick));
     edible_spawn_timer
         .strawberry_timer
-        .tick(Duration::from_millis((FPS / 10) as u64));
+        .tick(Duration::from_millis(fixed_tick));
+    edible_spawn_timer
+        .lettuce_timer
+        .tick(Duration::from_millis(fixed_tick));
 }
 
 pub fn spawn_strawberry_over_time(
@@ -506,6 +523,54 @@ pub fn player_ate_chili_pepper_system(
 
             if distance < TILE_SIZE / 2.0 + CHILI_PEPPER_SIZE / 2.0 {
                 ammo.0 += CHILI_PEPPER_AMMO_COUNT;
+                commands.entity(s).despawn_recursive();
+            }
+        }
+    }
+}
+
+pub fn spawn_lettuce_over_time(
+    mut commands: Commands,
+    mut agreed_seed: ResMut<AgreedRandom>,
+    mut rip: ResMut<RollbackIdProvider>,
+    asset_server: Res<TextureAssets>,
+    timer: Res<EdibleSpawnTimer>,
+    spawner_query: Query<&Transform, With<EncounterSpawner>>,
+) {
+    if timer.lettuce_timer.finished() {
+        let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
+
+        let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
+        let pos = spawn_area[idx];
+
+        commands.spawn((
+            Name::new("Lettuce"),
+            Lettuce {},
+            RoundComponent {},
+            SpriteBundle {
+                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
+                texture: asset_server.texture_lettuce.clone(),
+                ..Default::default()
+            },
+            rip.next(),
+        ));
+    }
+}
+
+pub fn player_ate_lettuce_system(
+    mut commands: Commands,
+    mut player_query: Query<(&Transform, &mut PlayerHealth), (With<Player>, Without<Fireball>)>,
+    lettuce_query: Query<(Entity, &Transform), (With<Lettuce>, With<Rollback>)>,
+) {
+    for (pt, mut health) in player_query.iter_mut() {
+        for (s, st) in lettuce_query.iter() {
+            let distance = pt.translation.distance(st.translation);
+
+            if distance < TILE_SIZE / 2.0 + LETTUCE_SIZE / 2.0 {
+                if health.0 < PLAYER_HEALTH_MAX {
+                    // clamp health game to max health
+                    health.0 = (health.0 + LETTUCE_HEALTH_GAIN).clamp(0, PLAYER_HEALTH_MAX);
+                }
                 commands.entity(s).despawn_recursive();
             }
         }
@@ -609,6 +674,9 @@ pub fn damage_players(
 ) {
     for (mut health, transform, player) in player_query.iter_mut() {
         for (entity, fireball_transform, fireball) in fireball_query.iter() {
+            if !player.active {
+                continue; // don't continue to damage dead players
+            }
             if fireball.shot_by == player.handle {
                 continue; // don't allow player to suicide
             };
