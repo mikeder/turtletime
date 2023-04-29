@@ -229,9 +229,6 @@ pub fn spawn_players(
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
 ) {
-    // init a new edible spawn timer
-    commands.insert_resource(EdibleSpawnTimer::default());
-
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
@@ -275,7 +272,6 @@ pub fn spawn_players(
 
 pub fn cleanup_round(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
     commands.remove_resource::<AgreedRandom>();
-    commands.remove_resource::<EdibleSpawnTimer>();
     commands.remove_resource::<LocalHandle>();
     commands.remove_resource::<Session<GGRSConfig>>();
 
