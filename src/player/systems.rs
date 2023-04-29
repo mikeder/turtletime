@@ -29,10 +29,6 @@ use bevy_ggrs::Session;
 use ggrs::InputStatus;
 use rand::Rng;
 
-pub fn init_round(mut commands: Commands) {
-    commands.init_resource::<EdibleSpawnTimer>();
-}
-
 pub fn create_ui(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
@@ -220,6 +216,9 @@ pub fn spawn_players(
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
 ) {
+    // init a new edible spawn timer
+    commands.insert_resource(EdibleSpawnTimer::default());
+
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
@@ -248,8 +247,8 @@ pub fn spawn_players(
                 handle,
                 ..Default::default()
             },
-            FireballAmmo(0),
-            FireballReady(false),
+            FireballAmmo::default(),
+            FireballReady::default(),
             PlayerControls::default(),
             PlayerHealth::default(),
             PlayerSpeed::default(),
