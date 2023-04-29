@@ -38,6 +38,7 @@ impl Plugin for PlayerPlugin {
             .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
             // fireball timers only used for despawn of old fireballs
             .add_system(tick_fireball_timers)
+            .add_system(tick_poop_timers)
             .add_system(check_win_state)
             .add_system(update_player_health_text)
             .add_system(update_player_fireball_text)
@@ -55,6 +56,8 @@ impl Plugin for PlayerPlugin {
                     move_fireballs,
                     damage_players,
                     kill_players,
+                    player_poops,
+                    player_stepped_in_poop,
                 )
                     .chain()
                     .in_set(PlayerSystemSet)
@@ -71,6 +74,7 @@ impl Plugin for PlayerPlugin {
                     player_ate_strawberry_system,
                     player_ate_lettuce_system,
                     despawn_old_fireballs,
+                    despawn_old_poops,
                 )
                     .chain()
                     .in_set(EdibleSystemSet)

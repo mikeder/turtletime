@@ -14,6 +14,7 @@ use crate::debug::DebugPlugin;
 use crate::loading::LoadingPlugin;
 use ascii::AsciiPlugin;
 use bevy::app::App;
+// use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use graphics::GraphicsPlugin;
 use map::tilemap::TileMapPlugin;

@@ -25,6 +25,10 @@ pub const PLAYER_SPEED_START: i32 = 100;
 pub const PLAYER_SPEED_BOOST: i32 = 25;
 pub const PLAYER_SPEED_MAX: i32 = 800;
 
+pub const POOP_SIZE: f32 = 16.0;
+pub const POOP_DAMAGE: i32 = 2;
+pub const POOP_LIFETIME: f32 = 10.0;
+
 #[derive(Component)]
 pub struct RoundComponent;
 
@@ -76,6 +80,26 @@ impl Default for EdibleSpawnTimer {
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct ChiliPepper;
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct PlayerPoop {
+    pub shat_by: usize,
+}
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct PlayerPoopTimer {
+    pub lifetime: Timer,
+}
+
+impl Default for PlayerPoopTimer {
+    fn default() -> Self {
+        PlayerPoopTimer {
+            lifetime: Timer::from_seconds(POOP_LIFETIME, TimerMode::Once),
+        }
+    }
+}
 
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]

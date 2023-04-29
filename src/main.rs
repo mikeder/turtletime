@@ -10,8 +10,8 @@ use std::io::Cursor;
 use turtle_time::debug::FrameCount;
 use turtle_time::player::checksum::Checksum;
 use turtle_time::player::components::{
-    ChiliPepper, Fireball, FireballMovement, Lettuce, Player, PlayerHealth, PlayerSpeed,
-    PlayerSpeedBoost, Strawberry,
+    ChiliPepper, Fireball, FireballMovement, Lettuce, Player, PlayerHealth, PlayerPoop,
+    PlayerSpeed, PlayerSpeedBoost, Strawberry,
 };
 use turtle_time::player::input::{input, GGRSConfig, PlayerControls};
 use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
@@ -34,6 +34,7 @@ fn main() {
         .register_rollback_component::<PlayerControls>()
         .register_rollback_component::<Strawberry>()
         .register_rollback_component::<Lettuce>()
+        .register_rollback_component::<PlayerPoop>()
         .register_rollback_component::<Transform>()
         .register_rollback_resource::<FrameCount>()
         .build(&mut app);

@@ -3,12 +3,12 @@ use std::time::Duration;
 use super::checksum::Checksum;
 use super::components::{
     ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Lettuce, Player, PlayerFireballText, PlayerHealth, PlayerHealthText,
-    PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText, RoundComponent, Strawberry,
-    CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
+    FireballTimer, Lettuce, Player, PlayerFireballText, PlayerHealth, PlayerHealthText, PlayerPoop,
+    PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText, RoundComponent,
+    Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
     LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
-    PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START, STRAWBERRY_AMMO_COUNT,
-    STRAWBERRY_SIZE,
+    PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE, POOP_SIZE,
+    STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -412,6 +412,81 @@ pub fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> 
         Vec2::splat(TILE_SIZE),
     );
     collision.is_some()
+}
+
+pub fn player_poops(
+    mut commands: Commands,
+    mut rip: ResMut<RollbackIdProvider>,
+    assets: Res<TextureAssets>,
+    player_query: Query<(&PlayerControls, &Transform, &PlayerSpeedBoost, &Player)>,
+) {
+    for (controls, transform, boost, player) in player_query.iter() {
+        if controls.sprinting && boost.0 > 0 {
+            // player poops
+            // position fireball slightly away from players position
+            let player_pos = transform.translation;
+            let pos = player_pos
+                + (Vec3::new(controls.dir.x, controls.dir.y, 0.)) / (TILE_SIZE * 1.5)
+                + POOP_SIZE;
+
+            commands.spawn((
+                Name::new("PlayerPoop"),
+                PlayerPoop {
+                    shat_by: player.handle,
+                },
+                PlayerPoopTimer::default(),
+                RoundComponent {},
+                SpriteBundle {
+                    sprite: Sprite {
+                        ..Default::default()
+                    },
+                    transform: Transform::from_xyz(pos.x, pos.y, 1.0)
+                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
+                    texture: assets.texture_poop.clone(),
+                    ..Default::default()
+                },
+                rip.next(),
+            ));
+        }
+    }
+}
+
+// TODO: add sound
+pub fn player_stepped_in_poop(
+    mut commands: Commands,
+    mut player_query: Query<(&Transform, &mut PlayerHealth, &Player)>,
+    poop_query: Query<(Entity, &Transform, &PlayerPoop), With<Rollback>>,
+) {
+    for (player_transform, mut health, player) in player_query.iter_mut() {
+        for (poop_ent, poop_transform, poop) in poop_query.iter() {
+            if poop.shat_by == player.handle {
+                continue;
+            }
+            let distance = player_transform
+                .translation
+                .distance(poop_transform.translation);
+
+            if distance < TILE_SIZE / 2.0 + POOP_SIZE / 2.0 {
+                // stepped in shit, take a little damage
+                health.0 -= POOP_DAMAGE;
+                commands.entity(poop_ent).despawn_recursive();
+            }
+        }
+    }
+}
+
+pub fn tick_poop_timers(mut query: Query<&mut PlayerPoopTimer>, time: Res<Time>) {
+    for mut timer in query.iter_mut() {
+        timer.lifetime.tick(time.delta());
+    }
+}
+
+pub fn despawn_old_poops(mut commands: Commands, mut query: Query<(Entity, &PlayerPoopTimer)>) {
+    for (poop, timer) in query.iter_mut() {
+        if timer.lifetime.finished() {
+            commands.entity(poop).despawn_recursive()
+        }
+    }
 }
 
 pub fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>) {
