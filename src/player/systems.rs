@@ -311,7 +311,7 @@ pub fn apply_inputs(
         pc.dir = direction.normalize_or_zero();
 
         if direction != Vec2::ZERO {
-            pc.last_dir = direction
+            pc.last_dir = pc.dir
         }
 
         if input & INPUT_FIRE != 0 {
