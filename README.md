@@ -6,15 +6,11 @@ Try it out here: https://mikeder.net/turtletime
 
 ## Features
 
-* 4 players spawn in a rectangle and can move independently. [WASD]
+* 2-8 players spawn in a rectangle and can move independently. [WASD]
 * Edible strawberries and chili peppers will spawn randomly on the map.
 * Eating strawberries will give you a temporary sprint ability. [LSHIFT]
 * Eating chili peppers will give you the ability to shoot [5] fireballs! [SPACE] or [RETURN]
-* Players hit by 3-4 fireballs are set inactive, last remaining active player wins!
-
-## Road Map
-
-Selectable number of players - [example](https://github.com/johanhelsing/matchbox/blob/main/examples/bevy_ggrs/src/box_game.rs)
+* Players hit by enough fireballs are set inactive, last remaining active player wins!
 
 ## Inspiration
 
