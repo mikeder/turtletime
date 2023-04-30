@@ -7,7 +7,6 @@ use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
 use bevy_ggrs::GGRSPlugin;
 use std::io::Cursor;
-use turtle_time::debug::FrameCount;
 use turtle_time::player::checksum::Checksum;
 use turtle_time::player::components::{
     ChiliPepper, Fireball, FireballMovement, Lettuce, Player, PlayerHealth, PlayerPoop,
@@ -36,12 +35,10 @@ fn main() {
         .register_rollback_component::<Lettuce>()
         .register_rollback_component::<PlayerPoop>()
         .register_rollback_component::<Transform>()
-        .register_rollback_resource::<FrameCount>()
         .build(&mut app);
 
     app.insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
-        .init_resource::<FrameCount>()
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {

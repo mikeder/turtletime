@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use bevy_ggrs::{GGRSSchedule, Session};
+use bevy_ggrs::Session;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::{
@@ -26,8 +26,7 @@ impl Plugin for DebugPlugin {
                 .register_type::<PlayerHealth>()
                 .register_type::<PlayerSpeed>()
                 .add_system(log_ggrs_events.in_set(OnUpdate(GameState::RoundLocal)))
-                .add_system(log_ggrs_events.in_set(OnUpdate(GameState::RoundOnline)))
-                .add_system(increase_frame_system.in_schedule(GGRSSchedule));
+                .add_system(log_ggrs_events.in_set(OnUpdate(GameState::RoundOnline)));
         }
     }
 }
@@ -41,14 +40,4 @@ pub fn log_ggrs_events(mut session: ResMut<Session<GGRSConfig>>) {
         }
         _ => (),
     }
-}
-
-#[derive(Resource, Default, Reflect, Hash)]
-#[reflect(Resource, Hash)]
-pub struct FrameCount {
-    pub frame: u32,
-}
-
-pub fn increase_frame_system(mut frame_count: ResMut<FrameCount>) {
-    frame_count.frame += 1;
 }

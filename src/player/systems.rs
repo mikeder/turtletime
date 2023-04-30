@@ -33,6 +33,25 @@ use bevy_ggrs::Session;
 use ggrs::InputStatus;
 use rand::Rng;
 
+pub fn setup_round(mut commands: Commands) {
+    commands.spawn((Camera2dBundle::default(), RoundComponent));
+}
+
+pub fn cleanup_round(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
+    // cleanup agreed random, players will get new ID's each round
+    commands.remove_resource::<AgreedRandom>();
+
+    // cleanup local handle, local player could get a different handle next round
+    commands.remove_resource::<LocalHandle>();
+
+    // cleanup any old session resource
+    commands.remove_resource::<Session<GGRSConfig>>();
+
+    for e in query.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+}
+
 pub fn create_ui(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
@@ -42,8 +61,6 @@ pub fn create_ui(
         Some(handle) => handle.0,
         None => return, // Session hasn't started yet
     };
-
-    commands.spawn((Camera2dBundle::default(), RoundComponent));
 
     let player_name = format!("Player {}", player_handle);
 
@@ -120,7 +137,8 @@ pub fn create_ui(
                 })
                 .insert(PlayerSpeedBoostText);
         })
-        .insert(RoundComponent);
+        .insert(RoundComponent)
+        .insert(Name::new("PlayerUI"));
 }
 
 pub fn update_player_health_text(
@@ -267,16 +285,6 @@ pub fn spawn_players(
             RoundComponent,
             rip.next(),
         ));
-    }
-}
-
-pub fn cleanup_round(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
-    commands.remove_resource::<AgreedRandom>();
-    commands.remove_resource::<LocalHandle>();
-    commands.remove_resource::<Session<GGRSConfig>>();
-
-    for e in query.iter() {
-        commands.entity(e).despawn_recursive();
     }
 }
 
@@ -787,8 +795,14 @@ pub fn kill_players(
 pub fn check_win_state(
     mut commands: Commands,
     mut next_state: ResMut<NextState<GameState>>,
+    player_handle: Option<Res<LocalHandle>>,
     player_query: Query<&Player, Without<Fireball>>,
 ) {
+    let local_handle = match player_handle {
+        Some(handle) => handle.0,
+        None => return, // Session hasn't started yet
+    };
+
     let mut remaning_active = vec![];
     for player in player_query.iter() {
         if player.active {
@@ -796,8 +810,15 @@ pub fn check_win_state(
         }
     }
     if remaning_active.len() == 1 {
-        let result = format!("Player {} wins the round!", remaning_active[0].handle);
+        if remaning_active[0].handle == local_handle {
+            commands.insert_resource(MatchData {
+                result: format!("You Win!"),
+            })
+        } else {
+            commands.insert_resource(MatchData {
+                result: format!("You Lost!"),
+            })
+        }
         next_state.set(GameState::Win);
-        commands.insert_resource(MatchData { result })
     }
 }

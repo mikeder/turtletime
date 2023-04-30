@@ -1,5 +1,6 @@
 use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
+use super::resources::AgreedRandom;
 use crate::player::systems::*;
 use crate::GameState;
 use bevy::prelude::*;
@@ -12,25 +13,15 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<EdibleSpawnTimer>()
-            .add_system(
-                create_ui
-                    .in_schedule(OnEnter(GameState::RoundLocal))
-                    .in_set(SpawnSystemSet),
+            .add_systems(
+                (setup_round, create_ui, spawn_players)
+                    .in_set(SpawnSystemSet)
+                    .in_schedule(OnEnter(GameState::RoundLocal)),
             )
-            .add_system(
-                create_ui
-                    .in_schedule(OnEnter(GameState::RoundOnline))
-                    .in_set(SpawnSystemSet),
-            )
-            .add_system(
-                spawn_players
-                    .in_schedule(OnEnter(GameState::RoundLocal))
-                    .in_set(SpawnSystemSet),
-            )
-            .add_system(
-                spawn_players
-                    .in_schedule(OnEnter(GameState::RoundOnline))
-                    .in_set(SpawnSystemSet),
+            .add_systems(
+                (setup_round, create_ui, spawn_players)
+                    .in_set(SpawnSystemSet)
+                    .in_schedule(OnEnter(GameState::RoundOnline)),
             )
             .add_system(cleanup_round.in_schedule(OnExit(GameState::RoundLocal)))
             .add_system(cleanup_round.in_schedule(OnExit(GameState::RoundOnline)))
@@ -66,10 +57,10 @@ impl Plugin for PlayerPlugin {
             // edible rollback systems
             .add_systems(
                 (
-                    spawn_strawberry_over_time.run_if(resource_exists::<EdibleSpawnTimer>()),
-                    spawn_chili_pepper_over_time.run_if(resource_exists::<EdibleSpawnTimer>()),
-                    spawn_lettuce_over_time.run_if(resource_exists::<EdibleSpawnTimer>()),
-                    tick_edible_timer.run_if(resource_exists::<EdibleSpawnTimer>()),
+                    spawn_strawberry_over_time,
+                    spawn_chili_pepper_over_time,
+                    spawn_lettuce_over_time,
+                    tick_edible_timer,
                     player_ate_chili_pepper_system,
                     player_ate_strawberry_system,
                     player_ate_lettuce_system,
@@ -80,6 +71,8 @@ impl Plugin for PlayerPlugin {
                     .in_set(EdibleSystemSet)
                     .after(SpawnSystemSet)
                     .after(PlayerSystemSet)
+                    .distributive_run_if(resource_exists::<AgreedRandom>())
+                    .distributive_run_if(resource_exists::<EdibleSpawnTimer>())
                     .in_schedule(GGRSSchedule),
             );
     }

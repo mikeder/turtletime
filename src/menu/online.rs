@@ -6,7 +6,7 @@ use crate::loading::FontAssets;
 use crate::GameState;
 use bevy::prelude::*;
 
-const MIN_PLAYERS: usize = 1;
+const MIN_PLAYERS: usize = 2;
 const MAX_PLAYERS: usize = 8;
 
 #[derive(Component)]
