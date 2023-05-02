@@ -1,10 +1,11 @@
-use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
 use super::resources::AgreedRandom;
+use super::round::{cleanup_session, disconnect_remote_players};
+use super::{checksum::checksum_players, input::GGRSConfig};
 use crate::player::systems::*;
-use crate::GameState;
+use crate::{AppState, GameState};
 use bevy::prelude::*;
-use bevy_ggrs::GGRSSchedule;
+use bevy_ggrs::{GGRSSchedule, Session};
 
 pub struct PlayerPlugin;
 
@@ -13,27 +14,29 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<EdibleSpawnTimer>()
+            // round setup
             .add_systems(
                 (setup_round, create_ui, spawn_players)
                     .in_set(SpawnSystemSet)
-                    .in_schedule(OnEnter(GameState::RoundLocal)),
+                    .in_schedule(OnEnter(GameState::Playing)),
             )
+            .add_system(camera_follow.run_if(in_state(GameState::Playing)))
+            // round cleanup
+            .add_system(disconnect_remote_players.in_schedule(OnExit(AppState::RoundOnline)))
+            .add_system(cleanup_round.in_schedule(OnEnter(AppState::Win)))
+            .add_system(cleanup_session.in_schedule(OnExit(AppState::Win)))
+            // stateless timers and UI text updates
             .add_systems(
-                (setup_round, create_ui, spawn_players)
-                    .in_set(SpawnSystemSet)
-                    .in_schedule(OnEnter(GameState::RoundOnline)),
+                (
+                    tick_fireball_timers, // fireball timers only used for despawn of old fireballs
+                    tick_poop_timers,
+                    check_win_state,
+                    update_player_health_text,
+                    update_player_fireball_text,
+                    update_player_speed_boost_text,
+                )
+                    .distributive_run_if(in_state(GameState::Playing)),
             )
-            .add_system(cleanup_round.in_schedule(OnExit(GameState::RoundLocal)))
-            .add_system(cleanup_round.in_schedule(OnExit(GameState::RoundOnline)))
-            .add_system(camera_follow.run_if(in_state(GameState::RoundLocal)))
-            .add_system(camera_follow.run_if(in_state(GameState::RoundOnline)))
-            // fireball timers only used for despawn of old fireballs
-            .add_system(tick_fireball_timers)
-            .add_system(tick_poop_timers)
-            .add_system(check_win_state)
-            .add_system(update_player_health_text)
-            .add_system(update_player_fireball_text)
-            .add_system(update_player_speed_boost_text)
             // these systems will be executed as part of the advance frame update
             // player rollback systems
             .add_systems(
@@ -52,6 +55,9 @@ impl Plugin for PlayerPlugin {
                 )
                     .chain()
                     .in_set(PlayerSystemSet)
+                    .distributive_run_if(resource_exists::<AgreedRandom>())
+                    .distributive_run_if(resource_exists::<Session<GGRSConfig>>())
+                    .distributive_run_if(in_state(GameState::Playing))
                     .in_schedule(GGRSSchedule),
             )
             // edible rollback systems
@@ -73,6 +79,8 @@ impl Plugin for PlayerPlugin {
                     .after(PlayerSystemSet)
                     .distributive_run_if(resource_exists::<AgreedRandom>())
                     .distributive_run_if(resource_exists::<EdibleSpawnTimer>())
+                    .distributive_run_if(resource_exists::<Session<GGRSConfig>>())
+                    .distributive_run_if(in_state(GameState::Playing))
                     .in_schedule(GGRSSchedule),
             );
     }

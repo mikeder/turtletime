@@ -1,5 +1,5 @@
 use super::map::ASCII_MAP;
-use crate::{loading::TextureAssets, GameState, TILE_SIZE};
+use crate::{loading::TextureAssets, AppState, GameState, TILE_SIZE};
 use bevy::prelude::*;
 
 pub struct TileMapPlugin;
@@ -20,10 +20,9 @@ pub struct TileCollider;
 
 impl Plugin for TileMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::spawn_map.in_schedule(OnExit(GameState::Loading)))
-            .add_system(Self::show_map.in_schedule(OnEnter(GameState::RoundLocal)))
-            .add_system(Self::show_map.in_schedule(OnEnter(GameState::RoundOnline)))
-            .add_system(Self::hide_map.in_schedule(OnEnter(GameState::MenuMain)));
+        app.add_system(Self::spawn_map.in_schedule(OnExit(AppState::Loading)))
+            .add_system(Self::show_map.in_schedule(OnEnter(GameState::Playing)))
+            .add_system(Self::hide_map.in_schedule(OnEnter(GameState::Paused)));
     }
 }
 

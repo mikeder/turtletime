@@ -1,6 +1,6 @@
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
-use crate::GameState;
+use crate::AppState;
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -108,14 +108,14 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
 }
 
 pub fn btn_listeners(
-    mut state: ResMut<NextState<GameState>>,
+    mut state: ResMut<NextState<AppState>>,
     mut interaction_query: Query<(&Interaction, &MenuOptionsBtn), Changed<Interaction>>,
 ) {
     for (interaction, btn) in interaction_query.iter_mut() {
         if let Interaction::Clicked = *interaction {
             match btn {
                 MenuOptionsBtn::Back => {
-                    state.set(GameState::MenuMain);
+                    state.set(AppState::MenuMain);
                 }
             }
         }

@@ -5,11 +5,12 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::{
     menu::connect::LocalHandle,
-    player::components::{
-        EdibleSpawnTimer, Fireball, Player, PlayerHealth, PlayerSpeed, Strawberry,
-    },
     player::input::GGRSConfig,
-    GameState,
+    player::{
+        checksum::Checksum,
+        components::{EdibleSpawnTimer, Fireball, Player, PlayerHealth, PlayerSpeed, Strawberry},
+    },
+    AppState,
 };
 
 pub struct DebugPlugin;
@@ -18,6 +19,7 @@ impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         if cfg!(debug_assertions) {
             app.add_plugin(WorldInspectorPlugin::new())
+                .register_type::<Checksum>()
                 .register_type::<LocalHandle>()
                 .register_type::<EdibleSpawnTimer>()
                 .register_type::<Fireball>()
@@ -25,8 +27,8 @@ impl Plugin for DebugPlugin {
                 .register_type::<Player>()
                 .register_type::<PlayerHealth>()
                 .register_type::<PlayerSpeed>()
-                .add_system(log_ggrs_events.in_set(OnUpdate(GameState::RoundLocal)))
-                .add_system(log_ggrs_events.in_set(OnUpdate(GameState::RoundOnline)));
+                .add_system(log_ggrs_events.in_set(OnUpdate(AppState::RoundLocal)))
+                .add_system(log_ggrs_events.in_set(OnUpdate(AppState::RoundOnline)));
         }
     }
 }

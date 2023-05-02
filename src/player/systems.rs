@@ -22,14 +22,13 @@ use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::online::PlayerCount;
 use crate::menu::win::MatchData;
-use crate::TILE_SIZE;
-use crate::{GameState, FPS};
+use crate::{AppState, FPS};
+use crate::{GameState, TILE_SIZE};
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
 use bevy_ggrs::PlayerInputs;
 use bevy_ggrs::Rollback;
 use bevy_ggrs::RollbackIdProvider;
-use bevy_ggrs::Session;
 use ggrs::InputStatus;
 use rand::Rng;
 
@@ -38,14 +37,7 @@ pub fn setup_round(mut commands: Commands) {
 }
 
 pub fn cleanup_round(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
-    // cleanup agreed random, players will get new ID's each round
-    commands.remove_resource::<AgreedRandom>();
-
-    // cleanup local handle, local player could get a different handle next round
-    commands.remove_resource::<LocalHandle>();
-
-    // cleanup any old session resource
-    commands.remove_resource::<Session<GGRSConfig>>();
+    info!("Cleanup Round");
 
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
@@ -794,7 +786,8 @@ pub fn kill_players(
 
 pub fn check_win_state(
     mut commands: Commands,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut app_state: ResMut<NextState<AppState>>,
+    mut game_state: ResMut<NextState<GameState>>,
     player_handle: Option<Res<LocalHandle>>,
     player_query: Query<&Player, Without<Fireball>>,
 ) {
@@ -819,6 +812,7 @@ pub fn check_win_state(
                 result: format!("You Lost!"),
             })
         }
-        next_state.set(GameState::Win);
+        app_state.set(AppState::Win);
+        game_state.set(GameState::Paused);
     }
 }

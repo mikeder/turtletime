@@ -2,13 +2,13 @@ use super::online::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
 use crate::player::input::GGRSConfig;
-use crate::{player, GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION};
+use crate::player::resources::AgreedRandom;
+use crate::{AppState, GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION};
 use bevy::prelude::*;
-use bevy::utils::Uuid;
 use bevy_ggrs::Session;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
-use bevy_matchbox::prelude::{PeerId, PeerState, SingleChannel};
+use bevy_matchbox::prelude::{PeerState, SingleChannel};
 use bevy_matchbox::MatchboxSocket;
 use ggrs::{PlayerType, SessionBuilder};
 
@@ -36,15 +36,19 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
     let lobby_id = &connect_data.lobby_id;
     let room_url = format!("{MATCHBOX_ADDR}/{lobby_id}");
     info!("connecting to matchbox server: {:?}", room_url);
-    let socket = MatchboxSocket::new_reliable(room_url);
-    commands.insert_resource(socket); // TODO: Remove on exit menu?
+
+    // remove old socket that may exist from previous round
+    commands.remove_resource::<MatchboxSocket<SingleChannel>>();
+    // insert new socket resource for next session
+    commands.insert_resource(MatchboxSocket::new_reliable(room_url));
     commands.remove_resource::<ConnectData>();
 }
 
 pub fn lobby_system(
     mut commands: Commands,
     mut socket: ResMut<MatchboxSocket<SingleChannel>>,
-    mut state: ResMut<NextState<GameState>>,
+    mut app_state: ResMut<NextState<AppState>>,
+    mut game_state: ResMut<NextState<GameState>>,
     player_count: Res<PlayerCount>,
     mut query: Query<&mut Text, With<LobbyText>>,
 ) {
@@ -67,20 +71,19 @@ pub fn lobby_system(
     // set final player list
     let players = socket.players();
 
-    let mut player_ids = Vec::new();
+    let mut peers = Vec::new();
     for p in players.clone() {
         match p {
-            PlayerType::Remote(id) => player_ids.push(id),
-            PlayerType::Spectator(id) => player_ids.push(id),
+            PlayerType::Remote(id) => peers.push(id),
+            PlayerType::Spectator(id) => peers.push(id),
             PlayerType::Local => (),
         }
     }
     // if we made it here we should have a local peer ID
-    let local_id = match socket.id() {
-        Some(id) => id,
-        None => PeerId(Uuid::new_v4()), // TODO: something more reliable
+    match socket.id() {
+        Some(id) => peers.push(id),
+        None => (), // TODO: something more reliable
     };
-    player_ids.push(local_id);
 
     // Create GGRS P2P Session
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
@@ -102,9 +105,6 @@ pub fn lobby_system(
             .expect("Invalid player added.");
     }
 
-    // Create agreed random resource
-    let agreed_random = player::resources::new_agreed_random(player_ids);
-
     // Start P2P session
     let channel = socket.take_channel(0).unwrap();
     let sess = sess_build
@@ -112,8 +112,9 @@ pub fn lobby_system(
         .expect("Session could not be created.");
 
     commands.insert_resource(Session::P2PSession(sess));
-    commands.insert_resource(agreed_random);
-    state.set(GameState::RoundOnline);
+    commands.insert_resource(AgreedRandom::new(peers));
+    app_state.set(AppState::RoundOnline);
+    game_state.set(GameState::Playing);
 }
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
@@ -213,14 +214,14 @@ pub fn btn_visuals(
 }
 
 pub fn btn_listeners(
-    mut state: ResMut<NextState<GameState>>,
+    mut state: ResMut<NextState<AppState>>,
     mut interaction_query: Query<(&Interaction, &MenuConnectBtn), Changed<Interaction>>,
 ) {
     for (interaction, btn) in interaction_query.iter_mut() {
         if let Interaction::Clicked = *interaction {
             match btn {
                 MenuConnectBtn::Back => {
-                    state.set(GameState::MenuMain);
+                    state.set(AppState::MenuMain);
                 }
             }
         }

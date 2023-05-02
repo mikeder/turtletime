@@ -3,7 +3,7 @@ use super::plugin::{
     BUTTON_TEXT, DISABLED_BUTTON, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION,
 };
 use crate::loading::FontAssets;
-use crate::GameState;
+use crate::AppState;
 use bevy::prelude::*;
 
 const MIN_PLAYERS: usize = 2;
@@ -359,7 +359,7 @@ pub fn btn_visuals(
 
 pub fn btn_listeners(
     mut commands: Commands,
-    mut state: ResMut<NextState<GameState>>,
+    mut state: ResMut<NextState<AppState>>,
     lobby_id: Res<LobbyID>,
     mut player_count: ResMut<PlayerCount>,
     mut interaction_query: Query<
@@ -393,16 +393,16 @@ pub fn btn_listeners(
                     commands.insert_resource(ConnectData {
                         lobby_id: format!("turtletime_{}_{}", VERSION, lobby_id.0),
                     });
-                    state.set(GameState::MenuConnect);
+                    state.set(AppState::MenuConnect);
                 }
                 MenuOnlineBtn::QuickMatch => {
                     commands.insert_resource(ConnectData {
                         lobby_id: format!("turtletime_{}?next={}", VERSION, player_count.0),
                     });
-                    state.set(GameState::MenuConnect);
+                    state.set(AppState::MenuConnect);
                 }
                 MenuOnlineBtn::Back => {
-                    state.set(GameState::MenuMain);
+                    state.set(AppState::MenuMain);
                 }
             }
         }

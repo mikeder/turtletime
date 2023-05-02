@@ -26,14 +26,14 @@ fn main() {
         .register_rollback_component::<ChiliPepper>()
         .register_rollback_component::<Fireball>()
         .register_rollback_component::<FireballMovement>()
+        .register_rollback_component::<Lettuce>()
         .register_rollback_component::<Player>()
         .register_rollback_component::<PlayerHealth>()
         .register_rollback_component::<PlayerSpeed>()
         .register_rollback_component::<PlayerSpeedBoost>()
         .register_rollback_component::<PlayerControls>()
-        .register_rollback_component::<Strawberry>()
-        .register_rollback_component::<Lettuce>()
         .register_rollback_component::<PlayerPoop>()
+        .register_rollback_component::<Strawberry>()
         .register_rollback_component::<Transform>()
         .build(&mut app);
 
@@ -53,7 +53,7 @@ fn main() {
                 })
                 .set(LogPlugin {
                     filter: "info,wgpu_core=warn,wgpu_hal=warn,matchbox_socket=warn".into(),
-                    level: bevy::log::Level::DEBUG,
+                    level: bevy::log::Level::WARN,
                 }),
         )
         .add_plugin(GamePlugin)

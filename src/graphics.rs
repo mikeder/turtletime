@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{loading::TextureAssets, GameState, TILE_SIZE};
+use crate::{loading::TextureAssets, AppState, TILE_SIZE};
 
 pub struct GraphicsPlugin;
 
@@ -21,7 +21,7 @@ pub struct Border;
 
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::load_graphics.in_schedule(OnEnter(GameState::MenuMain)))
+        app.add_system(Self::load_graphics.in_schedule(OnEnter(AppState::MenuMain)))
             .add_system(Self::frame_animation);
     }
 }

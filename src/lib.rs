@@ -40,7 +40,7 @@ const CHECK_DISTANCE: usize = 2;
 // See https://bevy-cheatbook.github.io/programming/states.html
 // Or https://github.com/bevyengine/bevy/blob/main/examples/ecs/state.rs
 #[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
-pub enum GameState {
+pub enum AppState {
     // During the loading State the LoadingPlugin will load our assets
     #[default]
     Loading,
@@ -60,11 +60,24 @@ pub enum GameState {
     Win,
 }
 
+// This example game uses States to separate logic
+// See https://bevy-cheatbook.github.io/programming/states.html
+// Or https://github.com/bevyengine/bevy/blob/main/examples/ecs/state.rs
+#[derive(States, Default, Clone, Eq, PartialEq, Debug, Hash)]
+pub enum GameState {
+    // Round is paused or in menu
+    #[default]
+    Paused,
+    // Round is actively being played
+    Playing,
+}
+
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<GameState>()
+        app.add_state::<AppState>()
+            .add_state::<GameState>()
             .add_plugin(AsciiPlugin)
             .add_plugin(LoadingPlugin)
             .add_plugin(GraphicsPlugin)

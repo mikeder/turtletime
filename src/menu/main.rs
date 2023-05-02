@@ -3,7 +3,8 @@ use super::online::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION};
 use crate::loading::{FontAssets, TextureAssets};
 use crate::player::input::GGRSConfig;
-use crate::{player, GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION};
+use crate::player::resources::AgreedRandom;
+use crate::{AppState, GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION};
 use bevy::utils::Uuid;
 use bevy::{app::AppExit, prelude::*};
 use bevy_ggrs::Session;
@@ -231,7 +232,8 @@ pub fn btn_visuals(
 pub fn btn_listeners(
     mut exit: EventWriter<AppExit>,
     mut commands: Commands,
-    mut state: ResMut<NextState<GameState>>,
+    mut app_state: ResMut<NextState<AppState>>,
+    mut game_state: ResMut<NextState<GameState>>,
     player_count: Res<PlayerCount>,
     mut interaction_query: Query<(&Interaction, &MainMenuBtn), Changed<Interaction>>,
 ) {
@@ -239,14 +241,15 @@ pub fn btn_listeners(
         if let Interaction::Clicked = *interaction {
             match btn {
                 MainMenuBtn::OnlineMatch => {
-                    state.set(GameState::MenuOnline);
+                    app_state.set(AppState::MenuOnline);
                 }
                 MainMenuBtn::LocalMatch => {
                     create_synctest_session(&mut commands, player_count.0);
-                    state.set(GameState::RoundLocal);
+                    app_state.set(AppState::RoundLocal);
+                    game_state.set(GameState::Playing);
                 }
                 MainMenuBtn::Options => {
-                    state.set(GameState::MenuOptions);
+                    app_state.set(AppState::MenuOptions);
                 }
                 MainMenuBtn::Quit => {
                     exit.send(AppExit);
@@ -271,18 +274,17 @@ fn create_synctest_session(commands: &mut Commands, num_players: usize) {
         .with_input_delay(INPUT_DELAY)
         .with_check_distance(CHECK_DISTANCE);
 
-    let mut peer_ids = Vec::new();
+    let mut peers = Vec::new();
     for i in 0..num_players {
         sess_build = sess_build
             .add_player(PlayerType::Local, i)
             .expect("Could not add local player");
-        peer_ids.push(PeerId(Uuid::new_v4()))
+        peers.push(PeerId(Uuid::new_v4()))
     }
-    let agreed_random = player::resources::new_agreed_random(peer_ids);
 
     let sess = sess_build.start_synctest_session().expect("");
 
     commands.insert_resource(Session::SyncTestSession(sess));
     commands.insert_resource(LocalHandle(0));
-    commands.insert_resource(agreed_random);
+    commands.insert_resource(AgreedRandom::new(peers));
 }

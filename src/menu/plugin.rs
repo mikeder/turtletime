@@ -1,5 +1,5 @@
 use crate::menu::{connect, main, online, options, win};
-use crate::GameState;
+use crate::AppState;
 use bevy::prelude::*;
 
 pub const DISABLED_BUTTON: Color = Color::rgb(0.8, 0.5, 0.5);
@@ -17,13 +17,13 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app
             // main menu
-            .add_system(main::setup_ui.in_schedule(OnEnter(GameState::MenuMain)))
+            .add_system(main::setup_ui.in_schedule(OnEnter(AppState::MenuMain)))
             .add_systems(
-                (main::btn_visuals, main::btn_listeners).in_set(OnUpdate(GameState::MenuMain)),
+                (main::btn_visuals, main::btn_listeners).in_set(OnUpdate(AppState::MenuMain)),
             )
-            .add_system(main::cleanup_ui.in_schedule(OnExit(GameState::MenuMain)))
+            .add_system(main::cleanup_ui.in_schedule(OnExit(AppState::MenuMain)))
             //online menu
-            .add_system(online::setup_ui.in_schedule(OnEnter(GameState::MenuOnline)))
+            .add_system(online::setup_ui.in_schedule(OnEnter(AppState::MenuOnline)))
             .add_systems(
                 (
                     online::update_lobby_id,
@@ -33,13 +33,13 @@ impl Plugin for MenuPlugin {
                     online::btn_listeners,
                     online::update_player_count_display,
                 )
-                    .in_set(OnUpdate(GameState::MenuOnline)),
+                    .in_set(OnUpdate(AppState::MenuOnline)),
             )
-            .add_system(online::cleanup_ui.in_schedule(OnExit(GameState::MenuOnline)))
+            .add_system(online::cleanup_ui.in_schedule(OnExit(AppState::MenuOnline)))
             // connect menu
             .add_systems(
                 (connect::create_matchbox_socket, connect::setup_ui)
-                    .in_schedule(OnEnter(GameState::MenuConnect)),
+                    .in_schedule(OnEnter(AppState::MenuConnect)),
             )
             .add_systems(
                 (
@@ -47,19 +47,19 @@ impl Plugin for MenuPlugin {
                     connect::btn_visuals,
                     connect::btn_listeners,
                 )
-                    .in_set(OnUpdate(GameState::MenuConnect)),
+                    .in_set(OnUpdate(AppState::MenuConnect)),
             )
-            .add_system(connect::cleanup_ui.in_schedule(OnExit(GameState::MenuConnect)))
+            .add_system(connect::cleanup_ui.in_schedule(OnExit(AppState::MenuConnect)))
             // options menu
-            .add_system(options::setup_ui.in_schedule(OnEnter(GameState::MenuOptions)))
+            .add_system(options::setup_ui.in_schedule(OnEnter(AppState::MenuOptions)))
             .add_systems(
                 (options::btn_visuals, options::btn_listeners)
-                    .in_set(OnUpdate(GameState::MenuOptions)),
+                    .in_set(OnUpdate(AppState::MenuOptions)),
             )
-            .add_system(options::cleanup_ui.in_schedule(OnExit(GameState::MenuOptions)))
+            .add_system(options::cleanup_ui.in_schedule(OnExit(AppState::MenuOptions)))
             // win menu
-            .add_system(win::setup_ui.in_schedule(OnEnter(GameState::Win)))
-            .add_systems((win::btn_visuals, win::btn_listeners).in_set(OnUpdate(GameState::Win)))
-            .add_system(win::cleanup_ui.in_schedule(OnExit(GameState::Win)));
+            .add_system(win::setup_ui.in_schedule(OnEnter(AppState::Win)))
+            .add_systems((win::btn_visuals, win::btn_listeners).in_set(OnUpdate(AppState::Win)))
+            .add_system(win::cleanup_ui.in_schedule(OnExit(AppState::Win)));
     }
 }
