@@ -82,6 +82,17 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
                     });
                 })
                 .insert(MenuWinBtn::Back);
+            parent.spawn(TextBundle {
+                text: Text::from_section(
+                    "This state is bugged...\nIf the button doesn't work, refresh the page.",
+                    TextStyle {
+                        font: font_assets.fira_sans.clone(),
+                        font_size: 20.0,
+                        color: Color::RED,
+                    },
+                ),
+                ..Default::default()
+            });
         })
         .insert(WinUI);
 
