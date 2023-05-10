@@ -410,7 +410,7 @@ pub fn btn_listeners(
 }
 
 pub fn update_player_count_display(
-    player_count: ResMut<PlayerCount>,
+    player_count: Res<PlayerCount>,
     mut query: Query<&mut Text, With<PlayerCountText>>,
 ) {
     for mut text in query.iter_mut() {

@@ -10,12 +10,11 @@ pub mod player;
 
 use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
-use crate::debug::DebugPlugin;
 use crate::loading::LoadingPlugin;
 use ascii::AsciiPlugin;
 use bevy::app::App;
-// use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
+use debug::plugin::DebugPlugin;
 use graphics::GraphicsPlugin;
 use map::tilemap::TileMapPlugin;
 use menu::plugin::MenuPlugin;
