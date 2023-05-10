@@ -27,14 +27,21 @@ impl Plugin for DebugPlugin {
                 .register_type::<LocalHandle>()
                 .register_type::<EdibleSpawnTimer>()
                 .register_type::<Player>()
-                .register_type::<PlayerHealth>()
-                .add_system(setup_ui.in_schedule(OnExit(AppState::Loading)))
-                .add_system(log_ggrs_events.in_set(OnUpdate(GameState::Playing)))
-                .add_system(open_console)
-                .add_system(set_peer_info.run_if(resource_exists::<PeerInfo>()))
-                .add_system(reset_console_ready.run_if(resource_exists::<PeerInfo>()))
-                .add_system(update_peer_info.run_if(resource_exists::<Session<GGRSConfig>>()));
+                .register_type::<PlayerHealth>();
         }
+    }
+}
+
+pub struct ConsolePlugin;
+
+impl Plugin for ConsolePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system(setup_ui.in_schedule(OnExit(AppState::Loading)))
+            .add_system(log_ggrs_events.in_set(OnUpdate(GameState::Playing)))
+            .add_system(open_console)
+            .add_system(set_peer_info.run_if(resource_exists::<PeerInfo>()))
+            .add_system(reset_console_ready.run_if(resource_exists::<PeerInfo>()))
+            .add_system(update_peer_info.run_if(resource_exists::<Session<GGRSConfig>>()));
     }
 }
 

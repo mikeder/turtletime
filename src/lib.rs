@@ -14,7 +14,7 @@ use crate::loading::LoadingPlugin;
 use ascii::AsciiPlugin;
 use bevy::app::App;
 use bevy::prelude::*;
-use debug::plugin::DebugPlugin;
+use debug::plugin::{ConsolePlugin, DebugPlugin};
 use graphics::GraphicsPlugin;
 use map::tilemap::TileMapPlugin;
 use menu::plugin::MenuPlugin;
@@ -84,7 +84,8 @@ impl Plugin for GamePlugin {
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)
             .add_plugin(InternalAudioPlugin)
-            .add_plugin(PlayerPlugin);
+            .add_plugin(PlayerPlugin)
+            .add_plugin(ConsolePlugin);
 
         #[cfg(debug_assertions)]
         {
