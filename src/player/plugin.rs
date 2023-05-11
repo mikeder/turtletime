@@ -1,11 +1,10 @@
+use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
-use super::resources::AgreedRandom;
 use super::round::{cleanup_session, disconnect_remote_players};
-use super::{checksum::checksum_players, input::GGRSConfig};
 use crate::player::systems::*;
 use crate::{AppState, GameState};
 use bevy::prelude::*;
-use bevy_ggrs::{GGRSSchedule, Session};
+use bevy_ggrs::GGRSSchedule;
 
 pub struct PlayerPlugin;
 
@@ -55,8 +54,6 @@ impl Plugin for PlayerPlugin {
                 )
                     .chain()
                     .in_set(PlayerSystemSet)
-                    .distributive_run_if(resource_exists::<AgreedRandom>())
-                    .distributive_run_if(resource_exists::<Session<GGRSConfig>>())
                     .distributive_run_if(in_state(GameState::Playing))
                     .in_schedule(GGRSSchedule),
             )
@@ -77,9 +74,6 @@ impl Plugin for PlayerPlugin {
                     .in_set(EdibleSystemSet)
                     .after(SpawnSystemSet)
                     .after(PlayerSystemSet)
-                    .distributive_run_if(resource_exists::<AgreedRandom>())
-                    .distributive_run_if(resource_exists::<EdibleSpawnTimer>())
-                    .distributive_run_if(resource_exists::<Session<GGRSConfig>>())
                     .distributive_run_if(in_state(GameState::Playing))
                     .in_schedule(GGRSSchedule),
             );

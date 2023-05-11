@@ -13,7 +13,7 @@ use crate::{
     AppState, GameState,
 };
 
-use super::components::{ConsoleReady, PeerInfo};
+use super::components::{ConsoleReady, ConsoleUpdateTimer, PeerInfo};
 use super::console::*;
 
 pub struct DebugPlugin;
@@ -45,39 +45,44 @@ impl Plugin for ConsolePlugin {
     }
 }
 
-pub fn update_peer_info(session: Res<Session<GGRSConfig>>, mut peer_info: ResMut<PeerInfo>) {
-    let mut tmp = String::new();
-    match session.as_ref() {
-        Session::P2PSession(s) => {
-            for player_handle in s.remote_player_handles() {
-                let stats = match s.network_stats(player_handle) {
-                    Ok(res) => {
-                        format!(
-                            "ping: {}, send_q: {}, kbps_sent: {}, local_frames_behind: {}",
-                            res.ping, res.send_queue_len, res.kbps_sent, res.local_frames_behind
-                        )
-                    }
-                    Err(e) => {
-                        format!("{:?}", e)
-                    }
-                };
-                let line = format!("Player {:?}: {:?}", player_handle, stats);
+pub fn update_peer_info(
+    session: Res<Session<GGRSConfig>>,
+    time: Res<Time>,
+    mut timer: ResMut<ConsoleUpdateTimer>,
+    mut peer_info: ResMut<PeerInfo>,
+) {
+    // only update when timer finishes
+    if timer.0.tick(time.delta()).just_finished() {
+        let mut tmp = String::new();
+        match session.as_ref() {
+            Session::P2PSession(s) => {
+                for player_handle in s.remote_player_handles() {
+                    let stats = match s.network_stats(player_handle) {
+                        Ok(res) => {
+                            format!("{:?}", res)
+                        }
+                        Err(e) => {
+                            format!("{:?}", e)
+                        }
+                    };
+                    let line = format!("Player {:?}: {:?}", player_handle, stats);
+                    tmp.reserve(line.len() + 1);
+                    tmp.push_str("\n");
+                    tmp.push_str(&line);
+                    tmp.push_str("\n");
+                }
+            }
+            Session::SyncTestSession(s) => {
+                let line = format!("Local players {}", s.num_players());
                 tmp.reserve(line.len() + 1);
                 tmp.push_str("\n");
                 tmp.push_str(&line);
                 tmp.push_str("\n");
             }
+            _ => (),
         }
-        Session::SyncTestSession(s) => {
-            let line = format!("Local players {}", s.num_players());
-            tmp.reserve(line.len() + 1);
-            tmp.push_str("\n");
-            tmp.push_str(&line);
-            tmp.push_str("\n");
-        }
-        _ => (),
+        peer_info.0 = tmp;
     }
-    peer_info.0 = tmp;
 }
 
 pub fn log_ggrs_events(mut session: ResMut<Session<GGRSConfig>>) {

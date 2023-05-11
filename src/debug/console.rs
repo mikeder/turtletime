@@ -1,4 +1,4 @@
-use super::components::{ConsoleReady, ConsoleText, ConsoleUI, PeerInfo};
+use super::components::{ConsoleReady, ConsoleText, ConsoleUI, ConsoleUpdateTimer, PeerInfo};
 use crate::loading::FontAssets;
 use bevy::prelude::*;
 
@@ -76,7 +76,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                                 value: "Peer Info: ".to_owned(),
                                 style: TextStyle {
                                     font: font_assets.fira_sans.clone(),
-                                    font_size: 20.0,
+                                    font_size: 15.0,
                                     color: Color::GREEN,
                                 },
                             },
@@ -84,7 +84,7 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                                 value: "".to_owned(),
                                 style: TextStyle {
                                     font: font_assets.fira_sans.clone(),
-                                    font_size: 20.0,
+                                    font_size: 15.0,
                                     color: Color::GREEN,
                                 },
                             },
@@ -100,6 +100,10 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         .insert(ConsoleUI);
 
     commands.insert_resource(PeerInfo("".to_string()));
+    commands.insert_resource(ConsoleUpdateTimer(Timer::from_seconds(
+        1.0,
+        TimerMode::Repeating,
+    )))
 }
 
 pub fn set_peer_info(peer_info: ResMut<PeerInfo>, mut query: Query<&mut Text, With<ConsoleText>>) {

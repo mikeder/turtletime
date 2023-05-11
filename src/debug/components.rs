@@ -14,3 +14,6 @@ pub struct ConsoleReady(pub bool);
 #[derive(Resource)]
 
 pub struct PeerInfo(pub String);
+
+#[derive(Resource)]
+pub struct ConsoleUpdateTimer(pub Timer);

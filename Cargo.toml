@@ -1,6 +1,6 @@
 [package]
 name = "turtle_time"
-version = "0.6.5"
+version = "0.6.6"
 publish = false
 authors = ["Mike Eder <mikedernet@gmail.com>"]   # ToDo: you are the author 
 edition = "2021"
@@ -41,6 +41,7 @@ bevy = { version = "0.10.1", default-features = false, features = [
     "bevy_asset",
     "bevy_sprite",
     "png",
+    "trace",
     "x11",
 ] }
 bevy_kira_audio = { version = "0.15" }

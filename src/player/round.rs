@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ggrs::{Rollback, Session};
 
-use crate::menu::connect::LocalHandle;
+use crate::{menu::connect::LocalHandle, player::components::EdibleSpawnTimer};
 
 use super::{input::GGRSConfig, resources::AgreedRandom};
 
@@ -31,6 +31,9 @@ pub fn cleanup_session(mut commands: Commands, rollback_query: Query<Entity, Wit
 
     // cleanup local handle, local player could get a different handle next round
     commands.remove_resource::<LocalHandle>();
+
+    // remove edible spawn timer, we will spawn a new one each round
+    commands.remove_resource::<EdibleSpawnTimer>();
 
     // finally remove old session
     commands.remove_resource::<Session<GGRSConfig>>();

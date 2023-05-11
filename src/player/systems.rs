@@ -34,6 +34,7 @@ use rand::Rng;
 
 pub fn setup_round(mut commands: Commands) {
     commands.spawn((Camera2dBundle::default(), RoundComponent));
+    commands.insert_resource(EdibleSpawnTimer::default());
 }
 
 pub fn cleanup_round(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
