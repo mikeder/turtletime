@@ -88,8 +88,8 @@ pub fn lobby_system(
     // Create GGRS P2P Session
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(player_count.0)
-        // .with_max_prediction_window(MAX_PREDICTION)
-        // .with_desync_detection_mode(ggrs::DesyncDetection::On { interval: 10 })
+        .with_max_prediction_window(MAX_PREDICTION)
+        .with_desync_detection_mode(ggrs::DesyncDetection::On { interval: 10 })
         .with_fps(FPS)
         .expect("Invalid FPS")
         .with_input_delay(INPUT_DELAY);
