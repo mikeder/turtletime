@@ -88,7 +88,7 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
                     TextStyle {
                         font: font_assets.fira_sans.clone(),
                         font_size: 20.0,
-                        color: Color::RED,
+                        color: Color::BLACK,
                     },
                 ),
                 ..Default::default()

@@ -3,7 +3,12 @@ use bevy_ggrs::{Rollback, Session};
 
 use crate::{menu::connect::LocalHandle, player::components::EdibleSpawnTimer};
 
-use super::{input::GGRSConfig, resources::AgreedRandom};
+use super::{components::RoundComponent, input::GGRSConfig, resources::AgreedRandom};
+
+pub fn setup_round(mut commands: Commands) {
+    commands.spawn((Camera2dBundle::default(), RoundComponent));
+    commands.insert_resource(EdibleSpawnTimer::default());
+}
 
 pub fn disconnect_remote_players(mut session: ResMut<Session<GGRSConfig>>) {
     match session.as_mut() {
@@ -23,6 +28,14 @@ pub fn disconnect_remote_players(mut session: ResMut<Session<GGRSConfig>>) {
     }
 }
 
+pub fn cleanup_round(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
+    info!("Cleanup Round");
+
+    for e in query.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+}
+
 pub fn cleanup_session(mut commands: Commands, rollback_query: Query<Entity, With<Rollback>>) {
     debug!("Cleanup Session");
 
@@ -32,11 +45,12 @@ pub fn cleanup_session(mut commands: Commands, rollback_query: Query<Entity, Wit
     // cleanup local handle, local player could get a different handle next round
     commands.remove_resource::<LocalHandle>();
 
-    // remove edible spawn timer, we will spawn a new one each round
-    commands.remove_resource::<EdibleSpawnTimer>();
-
     // finally remove old session
     commands.remove_resource::<Session<GGRSConfig>>();
+
+    // remove edible spawn timer, we will spawn a new one each round
+    // clean up AFTER session because this is a rollback resource
+    commands.remove_resource::<EdibleSpawnTimer>();
 
     for e in rollback_query.iter() {
         debug!("Despawn entity: {:?}", e);
