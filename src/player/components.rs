@@ -32,8 +32,8 @@ pub const POOP_LIFETIME: f32 = 10.0;
 #[derive(Component)]
 pub struct RoundComponent;
 
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
+#[derive(Component, Default, Hash, Reflect)]
+#[reflect(Component, Hash)]
 pub struct Fireball {
     pub shot_by: usize,
 }
@@ -62,6 +62,7 @@ impl Default for FireballTimer {
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 pub struct EdibleSpawnTimer {
+    // TODO: impl hash for sync test?
     pub chili_pepper_timer: Timer,
     pub strawberry_timer: Timer,
     pub lettuce_timer: Timer,
@@ -77,12 +78,12 @@ impl Default for EdibleSpawnTimer {
     }
 }
 
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
+#[derive(Component, Default, Hash, Reflect)]
+#[reflect(Component, Hash)]
 pub struct ChiliPepper;
 
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
+#[derive(Component, Default, Reflect, Hash)]
+#[reflect(Component, Hash)]
 pub struct PlayerPoop {
     pub shat_by: usize,
 }
@@ -109,23 +110,23 @@ pub struct FireballAmmo(pub i32);
 #[reflect(Component)]
 pub struct FireballReady(pub bool);
 
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
+#[derive(Component, Default, Reflect, Hash)]
+#[reflect(Component, Hash)]
 pub struct Strawberry;
 
-#[derive(Component, Default, Reflect)]
-#[reflect(Component)]
+#[derive(Component, Default, Hash, Reflect)]
+#[reflect(Component, Hash)]
 pub struct Lettuce;
 
-#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
-#[reflect(Component, InspectorOptions)]
+#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions, Hash)]
+#[reflect(Component, InspectorOptions, Hash)]
 pub struct Player {
     pub active: bool,
     pub handle: usize,
 }
 
-#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
-#[reflect(Component, InspectorOptions)]
+#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions, Hash)]
+#[reflect(Component, InspectorOptions, Hash)]
 pub struct PlayerSpeed(pub i32);
 
 impl Default for PlayerSpeed {
@@ -134,8 +135,8 @@ impl Default for PlayerSpeed {
     }
 }
 
-#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
-#[reflect(Component, InspectorOptions)]
+#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions, Hash)]
+#[reflect(Component, InspectorOptions, Hash)]
 pub struct PlayerSpeedBoost(pub i32);
 
 impl Default for PlayerSpeedBoost {
@@ -144,8 +145,8 @@ impl Default for PlayerSpeedBoost {
     }
 }
 
-#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions)]
-#[reflect(Component, InspectorOptions)]
+#[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions, Hash)]
+#[reflect(Component, InspectorOptions, Hash)]
 pub struct PlayerHealth(pub i32);
 
 impl Default for PlayerHealth {

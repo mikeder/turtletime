@@ -27,6 +27,7 @@ pub const ASPECT_RATIO: f32 = 16.0 / 9.0;
 pub const MAP_HEIGHT: f32 = 768.0;
 pub const TILE_SIZE: f32 = 32.0;
 pub const FPS: usize = 60;
+pub const FIXED_TICK_MS: u64 = 1000 / FPS as u64; // use fixed duration tick delta to keep in sync with GGRSSchedule
 
 // const MATCHBOX_ADDR: &str = "ws://localhost:3536";
 const MATCHBOX_ADDR: &str = "wss://match.sqweeb.net:443";

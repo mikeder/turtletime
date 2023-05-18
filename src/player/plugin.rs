@@ -27,8 +27,6 @@ impl Plugin for PlayerPlugin {
             // stateless timers and UI text updates
             .add_systems(
                 (
-                    tick_fireball_timers, // fireball timers only used for despawn of old fireballs
-                    tick_poop_timers,
                     check_win_state,
                     update_player_health_text,
                     update_player_fireball_text,
@@ -44,10 +42,10 @@ impl Plugin for PlayerPlugin {
                     apply_player_sprint,
                     move_players,
                     checksum_players,
-                    shoot_fireballs,
                     reload_fireballs,
+                    shoot_fireballs,
                     move_fireballs,
-                    damage_players,
+                    fireball_damage_players,
                     kill_players,
                     player_poops,
                     player_stepped_in_poop,
@@ -69,6 +67,8 @@ impl Plugin for PlayerPlugin {
                     player_ate_lettuce_system,
                     despawn_old_fireballs,
                     despawn_old_poops,
+                    tick_fireball_timers,
+                    tick_poop_timers,
                 )
                     .chain()
                     .in_set(EdibleSystemSet)

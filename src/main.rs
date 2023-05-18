@@ -9,8 +9,8 @@ use bevy_ggrs::GGRSPlugin;
 use std::io::Cursor;
 use turtle_time::player::checksum::Checksum;
 use turtle_time::player::components::{
-    ChiliPepper, EdibleSpawnTimer, Fireball, FireballMovement, Lettuce, Player, PlayerHealth,
-    PlayerPoop, PlayerSpeed, PlayerSpeedBoost, Strawberry,
+    ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
+    Lettuce, Player, PlayerHealth, PlayerPoop, PlayerSpeed, PlayerSpeedBoost, Strawberry,
 };
 use turtle_time::player::input::{input, GGRSConfig, PlayerControls};
 use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
@@ -25,6 +25,8 @@ fn main() {
         .register_rollback_component::<Checksum>()
         .register_rollback_component::<ChiliPepper>()
         .register_rollback_component::<Fireball>()
+        .register_rollback_component::<FireballAmmo>()
+        .register_rollback_component::<FireballReady>()
         .register_rollback_component::<FireballMovement>()
         .register_rollback_component::<Lettuce>()
         .register_rollback_component::<Player>()

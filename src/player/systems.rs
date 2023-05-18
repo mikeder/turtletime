@@ -22,7 +22,7 @@ use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::online::PlayerCount;
 use crate::menu::win::MatchData;
-use crate::{AppState, FPS};
+use crate::{AppState, FIXED_TICK_MS, FPS};
 use crate::{GameState, TILE_SIZE};
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
@@ -337,7 +337,7 @@ pub fn apply_player_sprint(
 
 pub fn move_players(
     walls: Query<&Transform, (With<TileCollider>, Without<Player>)>,
-    mut players: Query<
+    mut query: Query<
         (
             &mut Transform,
             &mut TextureAtlasSprite,
@@ -348,9 +348,13 @@ pub fn move_players(
         With<Rollback>,
     >,
 ) {
+    // collect and sort all players so we move them in a deterministic order
+    let mut players = query.iter_mut().collect::<Vec<_>>();
+    players.sort_by_key(|p| p.2.handle);
+
     // loop over all players and apply their inputs to movement
     // do NOT return early because we need to check all players for input/movement
-    for (mut transform, mut sprite, player, speed, controls) in players.iter_mut() {
+    for (mut transform, mut sprite, player, speed, controls) in players {
         if !player.active {
             continue; // don't return, we need to check other players for movement
         }
@@ -463,14 +467,22 @@ pub fn player_stepped_in_poop(
     }
 }
 
-pub fn tick_poop_timers(mut query: Query<&mut PlayerPoopTimer>, time: Res<Time>) {
-    for mut timer in query.iter_mut() {
-        timer.lifetime.tick(time.delta());
+pub fn tick_poop_timers(mut query: Query<(Entity, &mut PlayerPoopTimer)>) {
+    // collect and sort all poop timers in play so we tick them in a deterministic order
+    let mut poop_timers = query.iter_mut().collect::<Vec<_>>();
+    poop_timers.sort_by_key(|e| e.0);
+
+    for (_, mut timer) in poop_timers {
+        timer.lifetime.tick(Duration::from_millis(FIXED_TICK_MS));
     }
 }
 
 pub fn despawn_old_poops(mut commands: Commands, mut query: Query<(Entity, &PlayerPoopTimer)>) {
-    for (poop, timer) in query.iter_mut() {
+    // collect and sort all poops in play so we move them in a deterministic order
+    let mut poops = query.iter_mut().collect::<Vec<_>>();
+    poops.sort_by_key(|e| e.0);
+
+    for (poop, timer) in poops {
         if timer.lifetime.finished() {
             commands.entity(poop).despawn_recursive()
         }
@@ -478,18 +490,15 @@ pub fn despawn_old_poops(mut commands: Commands, mut query: Query<(Entity, &Play
 }
 
 pub fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>) {
-    // use fixed duration tick delta to keep in sync with GGRSSchedule
-    let fixed_tick = (1000 / FPS) as u64;
-
     edible_spawn_timer
         .chili_pepper_timer
-        .tick(Duration::from_millis(fixed_tick));
+        .tick(Duration::from_millis(FIXED_TICK_MS));
     edible_spawn_timer
         .strawberry_timer
-        .tick(Duration::from_millis(fixed_tick));
+        .tick(Duration::from_millis(FIXED_TICK_MS));
     edible_spawn_timer
         .lettuce_timer
-        .tick(Duration::from_millis(fixed_tick));
+        .tick(Duration::from_millis(FIXED_TICK_MS));
 }
 
 pub fn spawn_strawberry_over_time(
@@ -526,8 +535,11 @@ pub fn player_ate_strawberry_system(
     mut player_query: Query<(&Transform, &mut PlayerSpeedBoost), With<Player>>,
     strawberry_query: Query<(Entity, &Transform), (With<Strawberry>, With<Rollback>)>,
 ) {
+    let mut strawberries = strawberry_query.iter().collect::<Vec<_>>();
+    strawberries.sort_by_key(|e| e.0);
+
     for (pt, mut p) in player_query.iter_mut() {
-        for (s, st) in strawberry_query.iter() {
+        for (s, st) in strawberries.clone() {
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + STRAWBERRY_SIZE / 2.0 {
@@ -637,9 +649,14 @@ pub fn player_ate_lettuce_system(
 }
 
 // reload_fireball prevents the player from continuously shooting fireballs by holding INPUT_FIRE
-pub fn reload_fireballs(mut query: Query<(&mut FireballReady, &FireballAmmo, &PlayerControls)>) {
-    for (mut ready, ammo, controls) in query.iter_mut() {
-        if !controls.shooting && ammo.0 > 0 {
+pub fn reload_fireballs(
+    mut query: Query<(Entity, &mut FireballReady, &FireballAmmo, &PlayerControls)>,
+) {
+    let mut players = query.iter_mut().collect::<Vec<_>>();
+    players.sort_by_key(|e| e.0);
+
+    for (_, mut ready, ammo, controls) in players {
+        if !controls.shooting && ammo.0 > 0 && ready.0 == false {
             ready.0 = true;
         }
     }
@@ -649,7 +666,8 @@ pub fn shoot_fireballs(
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
     images: Res<TextureAssets>,
-    mut player_query: Query<(
+    mut query: Query<(
+        Entity,
         &Transform,
         &mut FireballAmmo,
         &mut FireballReady,
@@ -658,7 +676,21 @@ pub fn shoot_fireballs(
         &Player,
     )>,
 ) {
-    for (transform, mut ammo, mut ready, controls, speed, player) in player_query.iter_mut() {
+    // collect and sort all players in play so we move them in a deterministic order
+    let mut players = query.iter_mut().collect::<Vec<_>>();
+    players.sort_by_key(
+        |t: &(
+            Entity,
+            &Transform,
+            Mut<FireballAmmo>,
+            Mut<FireballReady>,
+            &PlayerControls,
+            &PlayerSpeed,
+            &Player,
+        )| t.0,
+    );
+
+    for (_, transform, mut ammo, mut ready, controls, speed, player) in players {
         if !player.active {
             continue; // prevent dead players from shooting
         }
@@ -675,64 +707,96 @@ pub fn shoot_fireballs(
                 + (Vec3::new(controls.dir.x, controls.dir.y, 0.)) * (TILE_SIZE * 1.5)
                 + FIREBALL_RADIUS;
 
-            commands.spawn((
-                Name::new("Fireball"),
-                Fireball {
-                    shot_by: player.handle,
-                },
-                FireballMovement {
-                    speed: speed.0 as f32,
-                    dir: controls.last_dir,
-                },
-                FireballTimer::default(),
-                RoundComponent,
-                SpriteBundle {
-                    transform: Transform::from_xyz(pos.x, pos.y, 1.)
-                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
-                    texture: images.texture_fireball.clone(),
-                    ..default()
-                },
-                rip.next(),
-            ));
+            debug!(
+                "Spawning fireball by {:?} ammo {:?}, ready {:?}",
+                player, ammo.0, ready.0
+            );
+
+            let fireball_id = commands
+                .spawn((
+                    Name::new("Fireball"),
+                    Fireball {
+                        shot_by: player.handle,
+                    },
+                    FireballMovement {
+                        speed: speed.0 as f32,
+                        dir: controls.last_dir,
+                    },
+                    FireballTimer::default(),
+                    RoundComponent,
+                    SpriteBundle {
+                        transform: Transform::from_xyz(pos.x, pos.y, 1.)
+                            .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
+                        texture: images.texture_fireball.clone(),
+                        ..default()
+                    },
+                    rip.next(),
+                ))
+                .id();
 
             ammo.0 -= 1;
             ready.0 = false;
+
+            debug!(
+                "Spawned fireball {:?} by {:?} ammo {:?}, ready {:?}",
+                fireball_id, player, ammo.0, ready.0
+            )
         }
     }
 }
 
 pub fn move_fireballs(
-    mut query: Query<(&mut Transform, &FireballMovement), (With<Fireball>, With<Rollback>)>,
+    mut query: Query<(Entity, &mut Transform, &FireballMovement), (With<Fireball>, With<Rollback>)>,
 ) {
-    for (mut transform, movement) in query.iter_mut() {
+    // collect and sort all fireballs in play so we move them in a deterministic order
+    let mut fireballs = query.iter_mut().collect::<Vec<_>>();
+    fireballs.sort_by_key(|t| t.0);
+
+    for (_, mut transform, movement) in fireballs {
         transform.translation += (movement.dir * (movement.speed * 0.05)).extend(0.);
     }
 }
 
-pub fn tick_fireball_timers(mut query: Query<&mut FireballTimer>, time: Res<Time>) {
-    for mut timer in query.iter_mut() {
-        timer.lifetime.tick(time.delta());
+pub fn tick_fireball_timers(mut query: Query<(Entity, &mut FireballTimer)>) {
+    // collect and sort all timers in play so we tick them in a deterministic order
+    let mut timers = query.iter_mut().collect::<Vec<_>>();
+    timers.sort_by_key(|t| t.0);
+
+    for (_, mut timer) in timers {
+        timer.lifetime.tick(Duration::from_millis(FIXED_TICK_MS));
     }
 }
 
 pub fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &FireballTimer)>) {
-    for (fireball, timer) in query.iter_mut() {
+    // collect and sort all fireballs in play so we despawn them in a deterministic order
+    let mut fireballs = query.iter_mut().collect::<Vec<_>>();
+    fireballs.sort_by_key(|e| e.0);
+
+    for (fireball, timer) in fireballs {
         if timer.lifetime.finished() {
+            debug!("Despawning old fireball {:?}", fireball);
             commands.entity(fireball).despawn_recursive()
         }
     }
 }
 
-pub fn damage_players(
+pub fn fireball_damage_players(
     mut commands: Commands,
     mut player_query: Query<
-        (&mut PlayerHealth, &Transform, &Player),
+        (Entity, &mut PlayerHealth, &Transform, &Player),
         (With<Rollback>, Without<Fireball>),
     >,
     fireball_query: Query<(Entity, &Transform, &Fireball), With<Rollback>>,
 ) {
-    for (mut health, transform, player) in player_query.iter_mut() {
-        for (entity, fireball_transform, fireball) in fireball_query.iter() {
+    // collect and sort all players and fireballs in play so we damage players in a deterministic order
+    let mut players = player_query.iter_mut().collect::<Vec<_>>();
+    players.sort_by_key(|e| e.0);
+
+    let mut fireballs = fireball_query.iter().collect::<Vec<_>>();
+    fireballs.sort_by_key(|e| e.0);
+
+    for (_, mut health, transform, player) in players {
+        for (entity, fireball_transform, fireball) in fireballs.clone() {
             if !player.active {
                 continue; // don't continue to damage dead players
             }
@@ -747,6 +811,10 @@ pub fn damage_players(
             if distance < TILE_SIZE + FIREBALL_RADIUS {
                 health.0 -= FIREBALL_DAMAGE;
                 commands.entity(entity).despawn_recursive(); // despawn fireball
+                debug!(
+                    "Fireball {:?} hit player, new health {:?}",
+                    entity, health.0
+                )
             }
         }
     }
@@ -755,6 +823,7 @@ pub fn damage_players(
 pub fn kill_players(
     mut player_query: Query<
         (
+            Entity,
             &mut Player,
             &PlayerHealth,
             &mut FrameAnimation,
@@ -763,7 +832,11 @@ pub fn kill_players(
         (With<Player>, Without<Fireball>),
     >,
 ) {
-    for (mut player, health, mut animation, mut sprite) in player_query.iter_mut() {
+    // collect and sort all players in play so we kill players in a deterministic order
+    let mut players = player_query.iter_mut().collect::<Vec<_>>();
+    players.sort_by_key(|e| e.0);
+
+    for (_, mut player, health, mut animation, mut sprite) in players {
         if health.0 <= 0 {
             animation.timer.set_mode(TimerMode::Once);
             sprite.flip_y = true;
@@ -777,15 +850,18 @@ pub fn check_win_state(
     mut app_state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<NextState<GameState>>,
     player_handle: Option<Res<LocalHandle>>,
-    player_query: Query<&Player, Without<Fireball>>,
+    player_query: Query<(Entity, &Player), Without<Fireball>>,
 ) {
     let local_handle = match player_handle {
         Some(handle) => handle.0,
         None => return, // Session hasn't started yet
     };
 
+    let mut players = player_query.iter().collect::<Vec<_>>();
+    players.sort_by_key(|e| e.0);
+
     let mut remaning_active = vec![];
-    for player in player_query.iter() {
+    for (_, player) in players {
         if player.active {
             remaning_active.push(player);
         }
