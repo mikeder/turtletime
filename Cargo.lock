@@ -1028,8 +1028,7 @@ dependencies = [
 [[package]]
 name = "bevy_matchbox"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4df9767dccb33996f9539734fbf85f2b06ea337bc7c9019a531d6f432215661d"
+source = "git+https://github.com/mikeder/matchbox.git?branch=fix/failed-send-panic#1eaaf1cfd6902fb39251f6186457b856143274df"
 dependencies = [
  "bevy",
  "matchbox_socket",
@@ -3219,8 +3218,7 @@ dependencies = [
 [[package]]
 name = "matchbox_protocol"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "748f4cf2140e5d5727207b75a829deb8e4e29067fc7133fed46da1cefa5bd637"
+source = "git+https://github.com/mikeder/matchbox.git?branch=fix/failed-send-panic#1eaaf1cfd6902fb39251f6186457b856143274df"
 dependencies = [
  "cfg-if",
  "derive_more",
@@ -3231,8 +3229,7 @@ dependencies = [
 [[package]]
 name = "matchbox_socket"
 version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02f79535a93bf46c611c0938c28c52b4275661821503c2bb05a7ed9d42ae2b5a"
+source = "git+https://github.com/mikeder/matchbox.git?branch=fix/failed-send-panic#1eaaf1cfd6902fb39251f6186457b856143274df"
 dependencies = [
  "async-compat",
  "async-trait",
@@ -4991,7 +4988,7 @@ dependencies = [
 
 [[package]]
 name = "turtle_time"
-version = "0.6.9"
+version = "0.6.10"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",

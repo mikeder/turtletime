@@ -1,6 +1,6 @@
 [package]
 name = "turtle_time"
-version = "0.6.9"
+version = "0.6.10"
 publish = false
 authors = ["Mike Eder <mikedernet@gmail.com>"]   # ToDo: you are the author 
 edition = "2021"
@@ -46,7 +46,9 @@ bevy = { version = "0.10.1", default-features = false, features = [
 bevy_kira_audio = { version = "0.15" }
 bevy_asset_loader = { version = "0.15" }
 bevy_ggrs = { version = "0.12" }
-bevy_matchbox = { version = "0.6", features = ["ggrs"] }
+bevy_matchbox = { version = "0.6", features = [
+    "ggrs",
+], git = "https://github.com/mikeder/matchbox.git", branch = "fix/failed-send-panic" }
 bevy-inspector-egui = "0.18.3"
 bytemuck = { version = "1.7.3", features = ["derive"] }
 ggrs = { version = "0.9.4", features = ["sync-send"] }

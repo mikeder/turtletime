@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_ggrs::{Rollback, Session};
+use bevy_matchbox::{prelude::SingleChannel, MatchboxSocket};
 
 use crate::{menu::connect::LocalHandle, player::components::EdibleSpawnTimer};
 
@@ -10,7 +11,11 @@ pub fn setup_round(mut commands: Commands) {
     commands.insert_resource(EdibleSpawnTimer::default());
 }
 
-pub fn disconnect_remote_players(mut session: ResMut<Session<GGRSConfig>>) {
+pub fn disconnect_remote_players(
+    mut session: ResMut<Session<GGRSConfig>>,
+    mut socket: ResMut<MatchboxSocket<SingleChannel>>,
+) {
+    debug!("disconnecting remote players...");
     match session.as_mut() {
         Session::P2PSession(s) => {
             for player_handle in s.remote_player_handles() {
@@ -26,9 +31,20 @@ pub fn disconnect_remote_players(mut session: ResMut<Session<GGRSConfig>>) {
         }
         _ => (),
     }
+    debug!("checking socket stats...");
+    socket.update_peers();
+    for p in socket.connected_peers() {
+        debug!("connected: {:?}", p)
+    }
+    for p in socket.disconnected_peers() {
+        debug!("disconnected: {:?}", p)
+    }
 }
 
-pub fn cleanup_round(mut commands: Commands, query: Query<Entity, With<RoundComponent>>) {
+pub fn cleanup_round(
+    mut commands: Commands,
+    query: Query<Entity, (With<RoundComponent>, Without<Rollback>)>,
+) {
     info!("Cleanup Round");
 
     for e in query.iter() {
@@ -49,7 +65,6 @@ pub fn cleanup_session(mut commands: Commands, rollback_query: Query<Entity, Wit
     commands.remove_resource::<Session<GGRSConfig>>();
 
     // remove edible spawn timer, we will spawn a new one each round
-    // clean up AFTER session because this is a rollback resource
     commands.remove_resource::<EdibleSpawnTimer>();
 
     for e in rollback_query.iter() {
