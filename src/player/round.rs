@@ -2,7 +2,13 @@ use bevy::prelude::*;
 use bevy_ggrs::{Rollback, Session};
 use bevy_matchbox::{prelude::SingleChannel, MatchboxSocket};
 
-use crate::{menu::connect::LocalHandle, player::components::EdibleSpawnTimer};
+use crate::{
+    menu::connect::LocalHandle,
+    player::{
+        components::EdibleSpawnTimer,
+        resources::{HealthBarsAdded, PlayersReady},
+    },
+};
 
 use super::{components::RoundComponent, input::GGRSConfig, resources::AgreedRandom};
 
@@ -57,7 +63,10 @@ pub fn cleanup_round(
 pub fn cleanup_session(mut commands: Commands, rollback_query: Query<Entity, With<Rollback>>) {
     debug!("Cleanup Session");
 
-    // // cleanup agreed random, players will get new ID's each round
+    commands.remove_resource::<PlayersReady>();
+    commands.remove_resource::<HealthBarsAdded>();
+
+    // cleanup agreed random, players will get new ID's each round
     commands.remove_resource::<AgreedRandom>();
 
     // cleanup local handle, local player could get a different handle next round
