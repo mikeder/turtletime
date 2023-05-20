@@ -56,7 +56,7 @@ fn main() {
                 })
                 .set(LogPlugin {
                     filter:
-                        "warn,wgpu_core=warn,wgpu_hal=warn,matchbox_socket=warn,turtle_time=info"
+                        "warn,wgpu_core=warn,wgpu_hal=warn,matchbox_socket=warn,turtle_time=trace"
                             .into(),
                     level: bevy::log::Level::WARN,
                 }),

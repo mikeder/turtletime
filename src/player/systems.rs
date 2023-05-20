@@ -3,18 +3,18 @@ use std::time::Duration;
 use super::checksum::Checksum;
 use super::components::{
     ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Lettuce, Player, PlayerFireballText, PlayerHealth, PlayerHealthText, PlayerPoop,
-    PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText, RoundComponent,
-    Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
-    LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
-    PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE, POOP_SIZE,
-    STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
+    FireballTimer, Lettuce, Player, PlayerFireballText, PlayerHealth, PlayerHealthBar,
+    PlayerHealthText, PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost,
+    PlayerSpeedBoostText, RoundComponent, Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE,
+    FIREBALL_DAMAGE, FIREBALL_RADIUS, LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW,
+    PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID, PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START,
+    POOP_DAMAGE, POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
     INPUT_SPRINT, INPUT_UP,
 };
-use super::resources::AgreedRandom;
+use super::resources::{AgreedRandom, HealthBarsAdded};
 
 use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::{FontAssets, TextureAssets};
@@ -22,8 +22,10 @@ use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::online::PlayerCount;
 use crate::menu::win::MatchData;
+use crate::player::resources::PlayersReady;
 use crate::{AppState, FIXED_TICK_MS, FPS};
 use crate::{GameState, TILE_SIZE};
+use bevy::math::vec3;
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
 use bevy_ggrs::PlayerInputs;
@@ -37,6 +39,8 @@ pub fn create_ui(
     font_assets: Res<FontAssets>,
     player_handle: Option<Res<LocalHandle>>,
 ) {
+    trace!("create_ui");
+
     let player_handle = match player_handle {
         Some(handle) => handle.0,
         None => return, // Session hasn't started yet
@@ -227,6 +231,8 @@ pub fn spawn_players(
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
 ) {
+    trace!("spawn_players");
+
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
@@ -266,6 +272,7 @@ pub fn spawn_players(
             rip.next(),
         ));
     }
+    commands.insert_resource(PlayersReady);
 }
 
 pub fn apply_inputs(
@@ -878,5 +885,61 @@ pub fn check_win_state(
         }
         app_state.set(AppState::Win);
         game_state.set(GameState::Paused);
+    }
+}
+
+pub fn add_player_health_bars(
+    mut commands: Commands,
+    query: Query<Entity, With<PlayerHealth>>,
+    done: Option<Res<HealthBarsAdded>>,
+) {
+    if done.is_some() {
+        return; // hack, already done
+    }
+
+    trace!("add_player_health_bars");
+
+    for health_entity in query.iter() {
+        trace!("Adding health bar");
+
+        commands.entity(health_entity).with_children(|cb| {
+            cb.spawn(SpriteBundle {
+                sprite: Sprite {
+                    color: Color::BLACK,
+                    custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 4.)),
+                    ..default()
+                },
+                transform: Transform::from_xyz(0., TILE_SIZE + 10.0, 0.),
+                ..default()
+            })
+            .with_children(|parent| {
+                parent
+                    .spawn(SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::RED,
+                            custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 4.)),
+                            ..default()
+                        },
+                        transform: Transform::from_xyz(0., 0., 0.2),
+                        ..default()
+                    })
+                    .insert(PlayerHealthBar { health_entity });
+            });
+        });
+    }
+    commands.insert_resource(HealthBarsAdded)
+}
+
+pub fn update_health_bars(
+    mut health_bars: Query<(Entity, &PlayerHealthBar, &mut Transform)>,
+    health_entities: Query<&PlayerHealth>,
+) {
+    let mut bars = health_bars.iter_mut().collect::<Vec<_>>();
+    bars.sort_by_key(|e| e.0);
+
+    for (_, health_bar, mut transform) in bars {
+        let player_health = health_entities.get(health_bar.health_entity).unwrap();
+        let health_percent = player_health.decimal();
+        transform.scale = vec3(health_percent as f32, 1.0, 1.0);
     }
 }

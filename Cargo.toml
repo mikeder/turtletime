@@ -1,6 +1,6 @@
 [package]
 name = "turtle_time"
-version = "0.6.10"
+version = "0.7.0"
 publish = false
 authors = ["Mike Eder <mikedernet@gmail.com>"]   # ToDo: you are the author 
 edition = "2021"
@@ -52,6 +52,7 @@ bevy_matchbox = { version = "0.6", features = [
 bevy-inspector-egui = "0.18.3"
 bytemuck = { version = "1.7.3", features = ["derive"] }
 ggrs = { version = "0.9.4", features = ["sync-send"] }
+percentage = { version = "*" }
 rand = { version = "0.8.3" }
 rand_seeder = { version = "0.2.3" }
 rand_pcg = { version = "*" }

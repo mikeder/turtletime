@@ -23,3 +23,9 @@ impl AgreedRandom {
         AgreedRandom { rng }
     }
 }
+
+#[derive(Resource)]
+pub struct PlayersReady;
+
+#[derive(Resource)]
+pub struct HealthBarsAdded;

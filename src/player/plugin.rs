@@ -1,5 +1,6 @@
 use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
+use super::resources::{HealthBarsAdded, PlayersReady};
 use super::round::{cleanup_round, cleanup_session, disconnect_remote_players, setup_round};
 use crate::player::systems::*;
 use crate::{AppState, GameState};
@@ -19,6 +20,8 @@ impl Plugin for PlayerPlugin {
                     .in_set(SpawnSystemSet)
                     .in_schedule(OnEnter(GameState::Playing)),
             )
+            .add_system(add_player_health_bars.run_if(resource_added::<PlayersReady>()))
+            .add_system(update_health_bars.run_if(resource_exists::<HealthBarsAdded>()))
             .add_system(camera_follow.run_if(in_state(GameState::Playing)))
             // round cleanup
             .add_system(disconnect_remote_players.in_schedule(OnExit(AppState::RoundOnline)))

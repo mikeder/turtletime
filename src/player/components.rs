@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::prelude::*;
 use bevy_inspector_egui::InspectorOptions;
+use percentage::Percentage;
 
 pub const CHILI_PEPPER_SIZE: f32 = 20.0;
 pub const CHILI_PEPPER_AMMO_COUNT: i32 = 5;
@@ -21,6 +22,7 @@ const LETTUCE_SPAWN_RATE: f32 = 5.;
 pub const PLAYER_HEALTH_MAX: i32 = 100;
 pub const PLAYER_HEALTH_MID: i32 = PLAYER_HEALTH_MAX / 2;
 pub const PLAYER_HEALTH_LOW: i32 = PLAYER_HEALTH_MAX / 4;
+
 pub const PLAYER_SPEED_START: i32 = 100;
 pub const PLAYER_SPEED_BOOST: i32 = 25;
 pub const PLAYER_SPEED_MAX: i32 = 800;
@@ -155,10 +157,31 @@ impl Default for PlayerHealth {
     }
 }
 
+impl PlayerHealth {
+    pub fn decimal(self) -> f32 {
+        self.percentage() as f32 / 100.
+    }
+
+    pub fn percentage(self) -> i32 {
+        Percentage::from(PLAYER_HEALTH_MAX)
+            .apply_to(self.0)
+            .clamp(0, 100)
+    }
+}
+
+#[derive(Component, Debug, Hash, Reflect)]
+#[reflect(Hash)]
+
+pub struct PlayerHealthBar {
+    pub health_entity: Entity,
+}
+
 #[derive(Component)]
 pub struct PlayerHealthText;
+
 #[derive(Component)]
 pub struct PlayerFireballText;
+
 #[derive(Component)]
 pub struct PlayerSpeedBoostText;
 

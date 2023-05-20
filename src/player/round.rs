@@ -7,6 +7,8 @@ use crate::{menu::connect::LocalHandle, player::components::EdibleSpawnTimer};
 use super::{components::RoundComponent, input::GGRSConfig, resources::AgreedRandom};
 
 pub fn setup_round(mut commands: Commands) {
+    trace!("setup_round");
+
     commands.spawn((Camera2dBundle::default(), RoundComponent));
     commands.insert_resource(EdibleSpawnTimer::default());
 }
@@ -15,7 +17,7 @@ pub fn disconnect_remote_players(
     mut session: ResMut<Session<GGRSConfig>>,
     mut socket: ResMut<MatchboxSocket<SingleChannel>>,
 ) {
-    debug!("disconnecting remote players...");
+    trace!("disconnecting remote players...");
     match session.as_mut() {
         Session::P2PSession(s) => {
             for player_handle in s.remote_player_handles() {
