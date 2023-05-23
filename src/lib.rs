@@ -31,7 +31,6 @@ pub const FIXED_TICK_MS: u64 = 1000 / FPS as u64; // use fixed duration tick del
 
 // const MATCHBOX_ADDR: &str = "ws://localhost:3536";
 const MATCHBOX_ADDR: &str = "wss://match.sqweeb.net:443";
-// const NUM_PLAYERS: usize = 4;
 const MAX_PREDICTION: usize = 12;
 const INPUT_DELAY: usize = 2;
 const CHECK_DISTANCE: usize = 2;
