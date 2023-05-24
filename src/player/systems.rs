@@ -904,6 +904,7 @@ pub fn add_player_health_bars(
 
         commands.entity(health_entity).with_children(|cb| {
             cb.spawn(SpriteBundle {
+                // black background
                 sprite: Sprite {
                     color: Color::BLACK,
                     custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 4.)),
@@ -915,9 +916,10 @@ pub fn add_player_health_bars(
             .with_children(|parent| {
                 parent
                     .spawn(SpriteBundle {
+                        // red overlay
                         sprite: Sprite {
                             color: Color::RED,
-                            custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 4.)),
+                            custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 8.)),
                             ..default()
                         },
                         transform: Transform::from_xyz(0., 0., 0.2),
@@ -940,6 +942,10 @@ pub fn update_health_bars(
     for (_, health_bar, mut transform) in bars {
         let player_health = health_entities.get(health_bar.health_entity).unwrap();
         let health_percent = player_health.decimal();
+        let h = PLAYER_HEALTH_MAX as f32 * 0.5;
+        let x_offset = h - h * health_percent;
+
         transform.scale = vec3(health_percent as f32, 1.0, 1.0);
+        transform.translation = vec3(-x_offset, 0., 0.2)
     }
 }

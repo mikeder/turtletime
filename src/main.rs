@@ -41,7 +41,7 @@ fn main() {
         .build(&mut app);
 
     app.insert_resource(Msaa::Off)
-        .insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.3, 0.0)))
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
