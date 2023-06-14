@@ -10,7 +10,11 @@ use crate::{
     },
 };
 
-use super::{components::RoundComponent, input::GGRSConfig, resources::AgreedRandom};
+use super::{
+    components::{Expired, RoundComponent},
+    input::GGRSConfig,
+    resources::AgreedRandom,
+};
 
 pub fn setup_round(mut commands: Commands) {
     trace!("setup_round");
@@ -55,12 +59,20 @@ pub fn cleanup_round(
 ) {
     info!("Cleanup Round");
 
-    for e in query.iter() {
+    let mut targets = query.iter().collect::<Vec<_>>();
+    targets.sort_by_key(|e| *e);
+    debug!(
+        "number of non-rollback entities to remove: {:?}",
+        targets.len()
+    );
+
+    for e in targets {
+        debug!("Despawn entity: {:?}", e);
         commands.entity(e).despawn_recursive();
     }
 }
 
-pub fn cleanup_session(mut commands: Commands, rollback_query: Query<Entity, With<Rollback>>) {
+pub fn cleanup_session(mut commands: Commands, query: Query<Entity, With<Rollback>>) {
     debug!("Cleanup Session");
 
     commands.remove_resource::<PlayersReady>();
@@ -78,8 +90,25 @@ pub fn cleanup_session(mut commands: Commands, rollback_query: Query<Entity, Wit
     // remove edible spawn timer, we will spawn a new one each round
     commands.remove_resource::<EdibleSpawnTimer>();
 
-    for e in rollback_query.iter() {
+    let mut targets = query.iter().collect::<Vec<_>>();
+    targets.sort_by_key(|e| *e);
+    debug!("number of rollback entities to remove: {:?}", targets.len());
+
+    for e in targets {
         debug!("Despawn entity: {:?}", e);
         commands.entity(e).despawn_recursive()
+    }
+}
+
+pub fn remove_expired(mut commands: Commands, expired_query: Query<Entity, With<Expired>>) {
+    trace!("remove_expired");
+
+    let mut expired = expired_query.iter().collect::<Vec<_>>();
+    expired.sort_by_key(|e| *e);
+    debug!("expiring entities: {:?}", expired.len());
+
+    for e in expired {
+        commands.entity(e).despawn_recursive();
+        debug!("expired: {:?}", e);
     }
 }

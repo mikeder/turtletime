@@ -6,8 +6,10 @@ pub struct GraphicsPlugin;
 
 #[derive(Resource)]
 pub struct CharacterSheet {
-    pub handle: Handle<TextureAtlas>,
+    pub turtle_handle: Handle<TextureAtlas>,
+    pub goose_handle: Handle<TextureAtlas>,
     pub turtle_frames: [usize; 4],
+    pub goose_frames: [usize; 4],
 }
 
 #[derive(Component)]
@@ -32,6 +34,7 @@ impl GraphicsPlugin {
         mut commands: Commands,
         mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     ) {
+        // load turtle atlas sheet
         let turtle_atlas = TextureAtlas::from_grid(
             assets.texture_turtle_cheeks_frame_party_hat.clone(),
             Vec2::splat(TILE_SIZE),
@@ -40,11 +43,23 @@ impl GraphicsPlugin {
             Some(Vec2 { x: 2.0, y: 0. }),
             Some(Vec2 { x: 0.0, y: 0. }),
         );
-        let atlas_handle = texture_atlases.add(turtle_atlas);
 
+        // load goose atlas sheet
+        let goose_atlas = TextureAtlas::from_grid(
+            assets.texture_goose.clone(),
+            Vec2::splat(TILE_SIZE),
+            4,
+            1,
+            Some(Vec2 { x: 1.0, y: 0. }),
+            Some(Vec2 { x: 0.0, y: 0. }),
+        );
+
+        // add character sheet with atlas and frame instructions
         commands.insert_resource(CharacterSheet {
-            handle: atlas_handle,
+            turtle_handle: texture_atlases.add(turtle_atlas),
             turtle_frames: [0, 1, 2, 3],
+            goose_handle: texture_atlases.add(goose_atlas),
+            goose_frames: [0, 1, 2, 3],
         });
     }
 

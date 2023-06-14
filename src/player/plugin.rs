@@ -1,7 +1,9 @@
 use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
 use super::resources::{HealthBarsAdded, PlayersReady};
-use super::round::{cleanup_round, cleanup_session, disconnect_remote_players, setup_round};
+use super::round::{
+    cleanup_round, cleanup_session, disconnect_remote_players, remove_expired, setup_round,
+};
 use crate::player::systems::*;
 use crate::{AppState, GameState};
 use bevy::prelude::*;
@@ -25,8 +27,11 @@ impl Plugin for PlayerPlugin {
             .add_system(camera_follow.run_if(in_state(GameState::Playing)))
             // round cleanup
             .add_system(disconnect_remote_players.in_schedule(OnExit(AppState::RoundOnline)))
-            .add_system(cleanup_round.in_schedule(OnEnter(AppState::Win)))
-            .add_system(cleanup_session.in_schedule(OnExit(AppState::Win)))
+            .add_systems(
+                (cleanup_session, cleanup_round)
+                    .chain()
+                    .in_schedule(OnEnter(AppState::Win)),
+            )
             // stateless timers and UI text updates
             .add_systems(
                 (
@@ -72,6 +77,7 @@ impl Plugin for PlayerPlugin {
                     despawn_old_poops,
                     tick_fireball_timers,
                     tick_poop_timers,
+                    remove_expired,
                 )
                     .chain()
                     .in_set(EdibleSystemSet)

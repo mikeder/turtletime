@@ -2,13 +2,13 @@ use std::time::Duration;
 
 use super::checksum::Checksum;
 use super::components::{
-    ChiliPepper, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Lettuce, Player, PlayerFireballText, PlayerHealth, PlayerHealthBar,
-    PlayerHealthText, PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost,
-    PlayerSpeedBoostText, RoundComponent, Strawberry, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE,
-    FIREBALL_DAMAGE, FIREBALL_RADIUS, LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW,
-    PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID, PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START,
-    POOP_DAMAGE, POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
+    Edible, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
+    FireballTimer, Player, PlayerFireballText, PlayerHealth, PlayerHealthBar, PlayerHealthText,
+    PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText,
+    RoundComponent, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
+    LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
+    PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE, POOP_SIZE,
+    STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -22,6 +22,7 @@ use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::online::PlayerCount;
 use crate::menu::win::MatchData;
+use crate::player::components::Expired;
 use crate::player::resources::PlayersReady;
 use crate::{AppState, FIXED_TICK_MS, FPS};
 use crate::{GameState, TILE_SIZE};
@@ -245,7 +246,7 @@ pub fn spawn_players(
             Name::new(name),
             SpriteSheetBundle {
                 sprite: sprite.clone(),
-                texture_atlas: characters.handle.clone(),
+                texture_atlas: characters.turtle_handle.clone(),
                 transform: Transform {
                     translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
                     ..Default::default()
@@ -367,17 +368,6 @@ pub fn move_players(
         }
 
         let movement = (controls.dir * speed.0 as f32 / FPS as f32).extend(0.);
-        if movement.x != 0. {
-            if movement.x > 0. {
-                // moving to the right
-                sprite.flip_x = false
-            }
-            if movement.x < 0. {
-                // moving to the left
-                sprite.flip_x = true
-            }
-        }
-
         let target = transform.translation + Vec3::new(0.0, movement.y, 0.0);
         if !walls
             .iter()
@@ -434,7 +424,7 @@ pub fn player_poops(
                     shat_by: player.handle,
                 },
                 PlayerPoopTimer::default(),
-                RoundComponent {},
+                RoundComponent,
                 SpriteBundle {
                     sprite: Sprite {
                         ..Default::default()
@@ -454,7 +444,7 @@ pub fn player_poops(
 pub fn player_stepped_in_poop(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut PlayerHealth, &Player)>,
-    poop_query: Query<(Entity, &Transform, &PlayerPoop), With<Rollback>>,
+    poop_query: Query<(Entity, &Transform, &PlayerPoop), (With<Rollback>, Without<Expired>)>,
 ) {
     for (player_transform, mut health, player) in player_query.iter_mut() {
         for (poop_ent, poop_transform, poop) in poop_query.iter() {
@@ -468,13 +458,13 @@ pub fn player_stepped_in_poop(
             if distance < TILE_SIZE / 2.0 + POOP_SIZE / 2.0 {
                 // stepped in shit, take a little damage
                 health.0 -= POOP_DAMAGE;
-                commands.entity(poop_ent).despawn_recursive();
+                commands.entity(poop_ent).insert(Expired);
             }
         }
     }
 }
 
-pub fn tick_poop_timers(mut query: Query<(Entity, &mut PlayerPoopTimer)>) {
+pub fn tick_poop_timers(mut query: Query<(Entity, &mut PlayerPoopTimer), Without<Expired>>) {
     // collect and sort all poop timers in play so we tick them in a deterministic order
     let mut poop_timers = query.iter_mut().collect::<Vec<_>>();
     poop_timers.sort_by_key(|e| e.0);
@@ -484,14 +474,19 @@ pub fn tick_poop_timers(mut query: Query<(Entity, &mut PlayerPoopTimer)>) {
     }
 }
 
-pub fn despawn_old_poops(mut commands: Commands, mut query: Query<(Entity, &PlayerPoopTimer)>) {
+pub fn despawn_old_poops(
+    mut commands: Commands,
+    mut query: Query<(Entity, &PlayerPoopTimer), Without<Expired>>,
+) {
+    trace!("despawn_old_poops");
+
     // collect and sort all poops in play so we move them in a deterministic order
     let mut poops = query.iter_mut().collect::<Vec<_>>();
     poops.sort_by_key(|e| e.0);
 
     for (poop, timer) in poops {
         if timer.lifetime.finished() {
-            commands.entity(poop).despawn_recursive()
+            commands.entity(poop).insert(Expired);
         }
     }
 }
@@ -524,8 +519,8 @@ pub fn spawn_strawberry_over_time(
 
         commands.spawn((
             Name::new("Strawberry"),
-            Strawberry {},
-            RoundComponent {},
+            Edible::Strawberry,
+            RoundComponent,
             SpriteBundle {
                 transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
                 texture: asset_server.texture_strawberry.clone(),
@@ -540,18 +535,24 @@ pub fn spawn_strawberry_over_time(
 pub fn player_ate_strawberry_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut PlayerSpeedBoost), With<Player>>,
-    strawberry_query: Query<(Entity, &Transform), (With<Strawberry>, With<Rollback>)>,
+    edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
 ) {
-    let mut strawberries = strawberry_query.iter().collect::<Vec<_>>();
+    let mut strawberries = edible_query
+        .iter()
+        .filter(|x| match x.1 {
+            Edible::Strawberry => true,
+            _ => false,
+        })
+        .collect::<Vec<_>>();
     strawberries.sort_by_key(|e| e.0);
 
     for (pt, mut p) in player_query.iter_mut() {
-        for (s, st) in strawberries.clone() {
+        for (s, _, st) in &strawberries {
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + STRAWBERRY_SIZE / 2.0 {
                 p.0 += STRAWBERRY_AMMO_COUNT;
-                commands.entity(s).despawn_recursive();
+                commands.entity(*s).insert(Expired);
             }
         }
     }
@@ -573,8 +574,8 @@ pub fn spawn_chili_pepper_over_time(
 
         commands.spawn((
             Name::new("ChiliPepper"),
-            ChiliPepper {},
-            RoundComponent {},
+            Edible::ChiliPepper,
+            RoundComponent,
             SpriteBundle {
                 sprite: Sprite {
                     custom_size: Some(Vec2::splat(CHILI_PEPPER_SIZE * 1.5)),
@@ -593,15 +594,24 @@ pub fn spawn_chili_pepper_over_time(
 pub fn player_ate_chili_pepper_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut FireballAmmo), (With<Player>, Without<Fireball>)>,
-    pepper_query: Query<(Entity, &Transform), (With<ChiliPepper>, With<Rollback>)>,
+    edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
 ) {
+    let mut peppers = edible_query
+        .iter()
+        .filter(|x| match x.1 {
+            Edible::ChiliPepper => true,
+            _ => false,
+        })
+        .collect::<Vec<_>>();
+    peppers.sort_by_key(|e| e.0);
+
     for (pt, mut ammo) in player_query.iter_mut() {
-        for (s, st) in pepper_query.iter() {
+        for (s, _, st) in &peppers {
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + CHILI_PEPPER_SIZE / 2.0 {
                 ammo.0 += CHILI_PEPPER_AMMO_COUNT;
-                commands.entity(s).despawn_recursive();
+                commands.entity(*s).insert(Expired);
             }
         }
     }
@@ -623,8 +633,8 @@ pub fn spawn_lettuce_over_time(
 
         commands.spawn((
             Name::new("Lettuce"),
-            Lettuce {},
-            RoundComponent {},
+            Edible::Lettuce,
+            RoundComponent,
             SpriteBundle {
                 transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
                 texture: asset_server.texture_lettuce.clone(),
@@ -638,10 +648,19 @@ pub fn spawn_lettuce_over_time(
 pub fn player_ate_lettuce_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &mut PlayerHealth), (With<Player>, Without<Fireball>)>,
-    lettuce_query: Query<(Entity, &Transform), (With<Lettuce>, With<Rollback>)>,
+    edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
 ) {
+    let mut lettuce = edible_query
+        .iter()
+        .filter(|x| match x.1 {
+            Edible::Lettuce => true,
+            _ => false,
+        })
+        .collect::<Vec<_>>();
+    lettuce.sort_by_key(|e| e.0);
+
     for (pt, mut health) in player_query.iter_mut() {
-        for (s, st) in lettuce_query.iter() {
+        for (s, _, st) in &lettuce {
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + LETTUCE_SIZE / 2.0 {
@@ -649,7 +668,7 @@ pub fn player_ate_lettuce_system(
                     // clamp health game to max health
                     health.0 = (health.0 + LETTUCE_HEALTH_GAIN).clamp(0, PLAYER_HEALTH_MAX);
                 }
-                commands.entity(s).despawn_recursive();
+                commands.entity(*s).insert(Expired);
             }
         }
     }
@@ -764,7 +783,7 @@ pub fn move_fireballs(
     }
 }
 
-pub fn tick_fireball_timers(mut query: Query<(Entity, &mut FireballTimer)>) {
+pub fn tick_fireball_timers(mut query: Query<(Entity, &mut FireballTimer), Without<Expired>>) {
     // collect and sort all timers in play so we tick them in a deterministic order
     let mut timers = query.iter_mut().collect::<Vec<_>>();
     timers.sort_by_key(|t| t.0);
@@ -774,7 +793,12 @@ pub fn tick_fireball_timers(mut query: Query<(Entity, &mut FireballTimer)>) {
     }
 }
 
-pub fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &FireballTimer)>) {
+pub fn despawn_old_fireballs(
+    mut commands: Commands,
+    mut query: Query<(Entity, &FireballTimer), Without<Expired>>,
+) {
+    trace!("despawn_old_fireballs");
+
     // collect and sort all fireballs in play so we despawn them in a deterministic order
     let mut fireballs = query.iter_mut().collect::<Vec<_>>();
     fireballs.sort_by_key(|e| e.0);
@@ -782,7 +806,7 @@ pub fn despawn_old_fireballs(mut commands: Commands, mut query: Query<(Entity, &
     for (fireball, timer) in fireballs {
         if timer.lifetime.finished() {
             debug!("Despawning old fireball {:?}", fireball);
-            commands.entity(fireball).despawn_recursive()
+            commands.entity(fireball).insert(Expired);
         }
     }
 }
@@ -817,7 +841,7 @@ pub fn fireball_damage_players(
 
             if distance < TILE_SIZE + FIREBALL_RADIUS {
                 health.0 -= FIREBALL_DAMAGE;
-                commands.entity(entity).despawn_recursive(); // despawn fireball
+                commands.entity(entity).insert(Expired); // despawn fireball
                 debug!(
                     "Fireball {:?} hit player, new health {:?}",
                     entity, health.0

@@ -5,15 +5,16 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::{
     menu::connect::LocalHandle,
+    npc::components::EdibleTarget,
     player::input::GGRSConfig,
     player::{
         checksum::Checksum,
-        components::{EdibleSpawnTimer, Player, PlayerHealth},
+        components::{Edible, EdibleSpawnTimer, Player, PlayerHealth},
     },
     AppState, GameState,
 };
 
-use super::components::{ConsoleReady, ConsoleUpdateTimer, PeerInfo};
+use super::components::{ConsoleReady, ConsoleUpdateTimer, EdibleCount, PeerInfo};
 use super::console::*;
 
 pub struct DebugPlugin;
@@ -25,6 +26,8 @@ impl Plugin for DebugPlugin {
                 .register_type::<Checksum>()
                 .register_type::<ConsoleReady>()
                 .register_type::<LocalHandle>()
+                .register_type::<EdibleTarget>()
+                .register_type::<Edible>()
                 .register_type::<EdibleSpawnTimer>()
                 .register_type::<Player>()
                 .register_type::<PlayerHealth>();
@@ -39,10 +42,15 @@ impl Plugin for ConsolePlugin {
         app.add_system(setup_ui.in_schedule(OnExit(AppState::Loading)))
             .add_system(log_ggrs_events.in_set(OnUpdate(GameState::Playing)))
             .add_system(open_console)
-            .add_system(set_peer_info.run_if(resource_exists::<PeerInfo>()))
+            .add_system(count_edibles.run_if(resource_exists::<EdibleCount>()))
+            .add_system(update_console_text.run_if(resource_exists::<PeerInfo>()))
             .add_system(reset_console_ready.run_if(resource_exists::<PeerInfo>()))
             .add_system(update_peer_info.run_if(resource_exists::<Session<GGRSConfig>>()));
     }
+}
+
+pub fn count_edibles(mut edible_count: ResMut<EdibleCount>, edible_query: Query<&Edible>) {
+    edible_count.0 = edible_query.iter().collect::<Vec<_>>().len();
 }
 
 pub fn update_peer_info(

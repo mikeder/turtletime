@@ -16,4 +16,8 @@ pub struct ConsoleReady(pub bool);
 pub struct PeerInfo(pub String);
 
 #[derive(Resource)]
+
+pub struct EdibleCount(pub usize);
+
+#[derive(Resource)]
 pub struct ConsoleUpdateTimer(pub Timer);

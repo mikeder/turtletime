@@ -6,18 +6,20 @@ mod graphics;
 mod loading;
 mod map;
 mod menu;
+pub mod npc;
 pub mod player;
 
 use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
 use ascii::AsciiPlugin;
-use bevy::app::App;
 use bevy::prelude::*;
+use bevy::{app::App, diagnostic::FrameTimeDiagnosticsPlugin};
 use debug::plugin::{ConsolePlugin, DebugPlugin};
 use graphics::GraphicsPlugin;
 use map::tilemap::TileMapPlugin;
 use menu::plugin::MenuPlugin;
+use npc::plugin::GoosePlugin;
 use player::plugin::PlayerPlugin;
 
 #[cfg(debug_assertions)]
@@ -85,18 +87,19 @@ impl Plugin for GamePlugin {
             .add_plugin(ActionsPlugin)
             .add_plugin(InternalAudioPlugin)
             .add_plugin(PlayerPlugin)
+            .add_plugin(GoosePlugin)
             .add_plugin(ConsolePlugin);
 
         #[cfg(debug_assertions)]
         {
             // With FPS
-            // app.add_plugin(FrameTimeDiagnosticsPlugin::default())
-            //     .add_plugin(DebugPlugin)
-            //     .add_plugin(LogDiagnosticsPlugin::default());
+            app.add_plugin(FrameTimeDiagnosticsPlugin::default())
+                .add_plugin(DebugPlugin)
+                .add_plugin(LogDiagnosticsPlugin::default());
 
             // Without FPS
-            app.add_plugin(DebugPlugin)
-                .add_plugin(LogDiagnosticsPlugin::default());
+            // app.add_plugin(DebugPlugin)
+            //     .add_plugin(LogDiagnosticsPlugin::default());
         }
     }
 }

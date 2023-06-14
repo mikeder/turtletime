@@ -1,4 +1,6 @@
-use super::components::{ConsoleReady, ConsoleText, ConsoleUI, ConsoleUpdateTimer, PeerInfo};
+use super::components::{
+    ConsoleReady, ConsoleText, ConsoleUI, ConsoleUpdateTimer, EdibleCount, PeerInfo,
+};
 use crate::loading::FontAssets;
 use bevy::prelude::*;
 
@@ -58,7 +60,12 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 ..Default::default()
             },
             visibility: Visibility::Hidden,
-            background_color: BackgroundColor(Color::BLACK),
+            background_color: BackgroundColor(Color::Rgba {
+                red: 0.,
+                green: 0.,
+                blue: 0.,
+                alpha: 0.7,
+            }),
             ..Default::default()
         })
         .with_children(|parent| {
@@ -71,24 +78,14 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         ..Default::default()
                     },
                     text: Text {
-                        sections: vec![
-                            TextSection {
-                                value: "Peer Info: ".to_owned(),
-                                style: TextStyle {
-                                    font: font_assets.fira_sans.clone(),
-                                    font_size: 15.0,
-                                    color: Color::GREEN,
-                                },
+                        sections: vec![TextSection {
+                            value: "".to_owned(),
+                            style: TextStyle {
+                                font: font_assets.fira_sans.clone(),
+                                font_size: 15.0,
+                                color: Color::GREEN,
                             },
-                            TextSection {
-                                value: "".to_owned(),
-                                style: TextStyle {
-                                    font: font_assets.fira_sans.clone(),
-                                    font_size: 15.0,
-                                    color: Color::GREEN,
-                                },
-                            },
-                        ],
+                        }],
                         ..Default::default()
                     },
                     ..Default::default()
@@ -100,14 +97,22 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         .insert(ConsoleUI);
 
     commands.insert_resource(PeerInfo("".to_string()));
+    commands.insert_resource(EdibleCount(0));
     commands.insert_resource(ConsoleUpdateTimer(Timer::from_seconds(
         1.0,
         TimerMode::Repeating,
     )))
 }
 
-pub fn set_peer_info(peer_info: ResMut<PeerInfo>, mut query: Query<&mut Text, With<ConsoleText>>) {
+pub fn update_console_text(
+    edible_count: ResMut<EdibleCount>,
+    peer_info: ResMut<PeerInfo>,
+    mut query: Query<&mut Text, With<ConsoleText>>,
+) {
     for mut text in query.iter_mut() {
-        text.sections[1].value = peer_info.0.to_string();
+        text.sections[0].value = format!(
+            "Edible count: {}\nPeer Info: \n{}",
+            edible_count.0, peer_info.0
+        );
     }
 }

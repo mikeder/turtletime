@@ -1,8 +1,8 @@
 [package]
 name = "turtle_time"
-version = "0.7.3"
+version = "0.8.0"
 publish = false
-authors = ["Mike Eder <mikedernet@gmail.com>"]   # ToDo: you are the author 
+authors = ["Mike Eder <mikedernet@gmail.com>"]
 edition = "2021"
 exclude = ["dist", "build", "assets", "credits"]
 

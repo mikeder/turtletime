@@ -31,7 +31,18 @@ pub const POOP_SIZE: f32 = 16.0;
 pub const POOP_DAMAGE: i32 = 2;
 pub const POOP_LIFETIME: f32 = 10.0;
 
-#[derive(Component)]
+#[derive(Component, Default, Hash, Reflect)]
+#[reflect(Component, Hash)]
+pub enum Edible {
+    #[default]
+    PLACEHOLDER,
+    ChiliPepper,
+    Strawberry,
+    Lettuce,
+}
+
+#[derive(Component, Default, Hash, Reflect)]
+#[reflect(Component, Hash)]
 pub struct RoundComponent;
 
 #[derive(Component, Default, Hash, Reflect)]
@@ -80,10 +91,6 @@ impl Default for EdibleSpawnTimer {
     }
 }
 
-#[derive(Component, Default, Hash, Reflect)]
-#[reflect(Component, Hash)]
-pub struct ChiliPepper;
-
 #[derive(Component, Default, Reflect, Hash)]
 #[reflect(Component, Hash)]
 pub struct PlayerPoop {
@@ -111,14 +118,6 @@ pub struct FireballAmmo(pub i32);
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct FireballReady(pub bool);
-
-#[derive(Component, Default, Reflect, Hash)]
-#[reflect(Component, Hash)]
-pub struct Strawberry;
-
-#[derive(Component, Default, Hash, Reflect)]
-#[reflect(Component, Hash)]
-pub struct Lettuce;
 
 #[derive(Component, Copy, Clone, Debug, Reflect, InspectorOptions, Hash)]
 #[reflect(Component, InspectorOptions, Hash)]
@@ -193,3 +192,7 @@ impl Default for Player {
         }
     }
 }
+
+#[derive(Component, Default, Hash, Reflect)]
+#[reflect(Component, Hash)]
+pub struct Expired;
