@@ -19,3 +19,12 @@ Try it out here: https://mikeder.net/turtletime
 [RPG Tutorial](https://github.com/mwbryant/rpg-bevy-tutorial)
 
 [GGRS Demo](https://github.com/gschup/bevy_ggrs_demo)
+
+## TODO
+
+1. Audio overhaul, replace the default sound w/ custom sounds.
+2. Scoreboard and Leaderboard for game stats, pickups, wins, loses, etc.
+3. More game modes, COOP survival, PVE.
+4. Controller support.
+
+
