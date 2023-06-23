@@ -41,7 +41,7 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
     commands.remove_resource::<MatchboxSocket<SingleChannel>>();
     // insert new socket resource for next session
     commands.insert_resource(MatchboxSocket::new_reliable(room_url));
-    commands.remove_resource::<ConnectData>();
+    // commands.remove_resource::<ConnectData>();
 }
 
 pub fn lobby_system(

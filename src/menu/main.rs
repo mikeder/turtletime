@@ -1,4 +1,4 @@
-use super::connect::LocalHandle;
+use super::connect::{ConnectData, LocalHandle};
 use super::online::PlayerCount;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION};
 use crate::loading::{FontAssets, TextureAssets};
@@ -244,6 +244,9 @@ pub fn btn_listeners(
                     app_state.set(AppState::MenuOnline);
                 }
                 MainMenuBtn::LocalMatch => {
+                    // remove any lingering online connect data
+                    commands.remove_resource::<ConnectData>();
+
                     create_synctest_session(&mut commands, player_count.0);
                     app_state.set(AppState::RoundLocal);
                     game_state.set(GameState::Playing);

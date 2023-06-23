@@ -1,3 +1,4 @@
+use super::connect::ConnectData;
 use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 use crate::loading::FontAssets;
 use crate::AppState;
@@ -9,6 +10,7 @@ pub struct WinUI;
 #[derive(Component)]
 pub enum MenuWinBtn {
     Back,
+    Rematch,
 }
 
 #[derive(Resource)]
@@ -16,7 +18,17 @@ pub struct MatchData {
     pub result: String,
 }
 
-pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets: Res<FontAssets>) {
+pub fn setup_ui(
+    mut commands: Commands,
+    match_data: Res<MatchData>,
+    font_assets: Res<FontAssets>,
+    connect_data: Option<Res<ConnectData>>,
+) {
+    let mut rematch_vis = Visibility::Hidden;
+    if connect_data.is_some() {
+        rematch_vis = Visibility::Visible;
+    }
+
     // ui camera
     commands.spawn(Camera2dBundle::default()).insert(WinUI);
 
@@ -54,6 +66,36 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
                 ),
                 ..Default::default()
             });
+            // rematch button
+            parent
+                .spawn(ButtonBundle {
+                    style: Style {
+                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        margin: UiRect::all(Val::Px(16.)),
+                        padding: UiRect::all(Val::Px(16.)),
+
+                        ..Default::default()
+                    },
+                    visibility: rematch_vis,
+                    background_color: NORMAL_BUTTON.into(),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle {
+                        text: Text::from_section(
+                            "Rematch",
+                            TextStyle {
+                                font: font_assets.fira_sans.clone(),
+                                font_size: 40.0,
+                                color: BUTTON_TEXT,
+                            },
+                        ),
+                        ..Default::default()
+                    });
+                })
+                .insert(MenuWinBtn::Rematch);
             // back to menu button
             parent
                 .spawn(ButtonBundle {
@@ -82,17 +124,6 @@ pub fn setup_ui(mut commands: Commands, match_data: Res<MatchData>, font_assets:
                     });
                 })
                 .insert(MenuWinBtn::Back);
-            parent.spawn(TextBundle {
-                text: Text::from_section(
-                    "This state is bugged...\nIf the button doesn't work, refresh the page.",
-                    TextStyle {
-                        font: font_assets.fira_sans.clone(),
-                        font_size: 20.0,
-                        color: Color::BLACK,
-                    },
-                ),
-                ..Default::default()
-            });
         })
         .insert(WinUI);
 
@@ -129,6 +160,9 @@ pub fn btn_listeners(
             match btn {
                 MenuWinBtn::Back => {
                     app_state.set(AppState::MenuMain);
+                }
+                MenuWinBtn::Rematch => {
+                    app_state.set(AppState::MenuConnect);
                 }
             }
         }

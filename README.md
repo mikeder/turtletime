@@ -26,5 +26,3 @@ Try it out here: https://mikeder.net/turtletime
 2. Scoreboard and Leaderboard for game stats, pickups, wins, loses, etc.
 3. More game modes, COOP survival, PVE.
 4. Controller support.
-
-
