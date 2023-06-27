@@ -1,4 +1,3 @@
-mod actions;
 mod ascii;
 mod audio;
 pub mod debug;
@@ -9,7 +8,6 @@ mod menu;
 pub mod npc;
 pub mod player;
 
-use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
 use ascii::AsciiPlugin;
@@ -84,7 +82,6 @@ impl Plugin for GamePlugin {
             .add_plugin(GraphicsPlugin)
             .add_plugin(TileMapPlugin)
             .add_plugin(MenuPlugin)
-            .add_plugin(ActionsPlugin)
             .add_plugin(InternalAudioPlugin)
             .add_plugin(PlayerPlugin)
             .add_plugin(GoosePlugin)

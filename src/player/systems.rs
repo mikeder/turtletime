@@ -16,8 +16,9 @@ use super::input::{
 };
 use super::resources::{AgreedRandom, HealthBarsAdded};
 
+use crate::audio::{FadedLoopSound, RollbackSound, RollbackSoundBundle};
 use crate::graphics::{CharacterSheet, FrameAnimation};
-use crate::loading::{FontAssets, TextureAssets};
+use crate::loading::{AudioAssets, FontAssets, TextureAssets};
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::online::PlayerCount;
@@ -26,6 +27,7 @@ use crate::player::components::Expired;
 use crate::player::resources::PlayersReady;
 use crate::{AppState, FIXED_TICK_MS, FPS};
 use crate::{GameState, TILE_SIZE};
+use bevy::core::FrameCount;
 use bevy::math::vec3;
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
@@ -227,6 +229,7 @@ pub fn camera_follow(
 
 pub fn spawn_players(
     mut commands: Commands,
+    sounds: Res<AudioAssets>,
     characters: Res<CharacterSheet>,
     player_count: Res<PlayerCount>,
     mut rip: ResMut<RollbackIdProvider>,
@@ -270,6 +273,13 @@ pub fn spawn_players(
             PlayerSpeedBoost::default(),
             Checksum::default(),
             RoundComponent,
+            FadedLoopSound {
+                audio_instance: None,
+                clip: sounds.walking.clone(),
+                fade_in: 0.1,
+                fade_out: 0.1,
+                should_play: false,
+            },
             rip.next(),
         ));
     }
@@ -277,10 +287,10 @@ pub fn spawn_players(
 }
 
 pub fn apply_inputs(
-    mut query: Query<(&mut PlayerControls, &Player)>,
+    mut query: Query<(&mut PlayerControls, &Player, &mut FadedLoopSound)>,
     inputs: Res<PlayerInputs<GGRSConfig>>,
 ) {
-    for (mut pc, p) in query.iter_mut() {
+    for (mut pc, p, mut sound) in query.iter_mut() {
         let input = match inputs[p.handle].1 {
             InputStatus::Confirmed => inputs[p.handle].0.input,
             InputStatus::Predicted => inputs[p.handle].0.input,
@@ -303,7 +313,10 @@ pub fn apply_inputs(
         pc.dir = direction.normalize_or_zero();
 
         if direction != Vec2::ZERO {
-            pc.last_dir = pc.dir
+            pc.last_dir = pc.dir;
+            sound.should_play = true
+        } else {
+            sound.should_play = false
         }
 
         if input & INPUT_FIRE != 0 {
@@ -406,7 +419,10 @@ pub fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> 
 pub fn player_poops(
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
-    assets: Res<TextureAssets>,
+
+    frame: Res<FrameCount>,
+    sounds: Res<AudioAssets>,
+    textures: Res<TextureAssets>,
     player_query: Query<(&PlayerControls, &Transform, &PlayerSpeedBoost, &Player)>,
 ) {
     for (controls, transform, boost, player) in player_query.iter() {
@@ -418,24 +434,36 @@ pub fn player_poops(
                 + (Vec3::new(controls.dir.x, controls.dir.y, 0.)) / (TILE_SIZE * 1.5)
                 + POOP_SIZE;
 
-            commands.spawn((
-                Name::new("PlayerPoop"),
-                PlayerPoop {
-                    shat_by: player.handle,
-                },
-                PlayerPoopTimer::default(),
-                RoundComponent,
-                SpriteBundle {
-                    sprite: Sprite {
+            let poop_instance = commands
+                .spawn((
+                    Name::new("PlayerPoop"),
+                    PlayerPoop {
+                        shat_by: player.handle,
+                    },
+                    PlayerPoopTimer::default(),
+                    RoundComponent,
+                    SpriteBundle {
+                        sprite: Sprite {
+                            ..Default::default()
+                        },
+                        transform: Transform::from_xyz(pos.x, pos.y, 1.0)
+                            .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
+                        texture: textures.texture_poop.clone(),
                         ..Default::default()
                     },
-                    transform: Transform::from_xyz(pos.x, pos.y, 1.0)
-                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
-                    texture: assets.texture_poop.clone(),
-                    ..Default::default()
+                    rip.next(),
+                ))
+                .id();
+
+            // spawn desired audio clip
+            commands.spawn(RollbackSoundBundle {
+                sound: RollbackSound {
+                    clip: sounds.sprinting.clone(),
+                    start_frame: frame.0,
+                    sub_key: poop_instance.index(),
                 },
-                rip.next(),
-            ));
+                rollback: rip.next(),
+            });
         }
     }
 }
@@ -534,6 +562,9 @@ pub fn spawn_strawberry_over_time(
 // TODO: add sound
 pub fn player_ate_strawberry_system(
     mut commands: Commands,
+    frame: Res<FrameCount>,
+    sounds: Res<AudioAssets>,
+    mut rip: ResMut<RollbackIdProvider>,
     mut player_query: Query<(&Transform, &mut PlayerSpeedBoost), With<Player>>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
 ) {
@@ -553,6 +584,16 @@ pub fn player_ate_strawberry_system(
             if distance < TILE_SIZE / 2.0 + STRAWBERRY_SIZE / 2.0 {
                 p.0 += STRAWBERRY_AMMO_COUNT;
                 commands.entity(*s).insert(Expired);
+
+                // spawn desired audio clip
+                commands.spawn(RollbackSoundBundle {
+                    sound: RollbackSound {
+                        clip: sounds.pickup.clone(),
+                        start_frame: frame.0,
+                        sub_key: s.index(),
+                    },
+                    rollback: rip.next(),
+                });
             }
         }
     }
@@ -593,6 +634,10 @@ pub fn spawn_chili_pepper_over_time(
 // TODO: add sound
 pub fn player_ate_chili_pepper_system(
     mut commands: Commands,
+    frame: Res<FrameCount>,
+    sounds: Res<AudioAssets>,
+    mut rip: ResMut<RollbackIdProvider>,
+
     mut player_query: Query<(&Transform, &mut FireballAmmo), (With<Player>, Without<Fireball>)>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
 ) {
@@ -612,6 +657,16 @@ pub fn player_ate_chili_pepper_system(
             if distance < TILE_SIZE / 2.0 + CHILI_PEPPER_SIZE / 2.0 {
                 ammo.0 += CHILI_PEPPER_AMMO_COUNT;
                 commands.entity(*s).insert(Expired);
+
+                // spawn desired audio clip
+                commands.spawn(RollbackSoundBundle {
+                    sound: RollbackSound {
+                        clip: sounds.pickup.clone(),
+                        start_frame: frame.0,
+                        sub_key: s.index(),
+                    },
+                    rollback: rip.next(),
+                });
             }
         }
     }
@@ -647,6 +702,9 @@ pub fn spawn_lettuce_over_time(
 
 pub fn player_ate_lettuce_system(
     mut commands: Commands,
+    frame: Res<FrameCount>,
+    mut rip: ResMut<RollbackIdProvider>,
+    sounds: Res<AudioAssets>,
     mut player_query: Query<(&Transform, &mut PlayerHealth), (With<Player>, Without<Fireball>)>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
 ) {
@@ -669,6 +727,16 @@ pub fn player_ate_lettuce_system(
                     health.0 = (health.0 + LETTUCE_HEALTH_GAIN).clamp(0, PLAYER_HEALTH_MAX);
                 }
                 commands.entity(*s).insert(Expired);
+
+                // spawn desired audio clip
+                commands.spawn(RollbackSoundBundle {
+                    sound: RollbackSound {
+                        clip: sounds.pickup.clone(),
+                        start_frame: frame.0,
+                        sub_key: s.index(),
+                    },
+                    rollback: rip.next(),
+                });
             }
         }
     }
@@ -692,6 +760,9 @@ pub fn shoot_fireballs(
     mut commands: Commands,
     mut rip: ResMut<RollbackIdProvider>,
     images: Res<TextureAssets>,
+    sounds: Res<AudioAssets>,
+    frame: Res<FrameCount>,
+
     mut query: Query<(
         Entity,
         &Transform,
@@ -738,6 +809,7 @@ pub fn shoot_fireballs(
                 player, ammo.0, ready.0
             );
 
+            let rollback = rip.next();
             let fireball_id = commands
                 .spawn((
                     Name::new("Fireball"),
@@ -756,7 +828,7 @@ pub fn shoot_fireballs(
                         texture: images.texture_fireball.clone(),
                         ..default()
                     },
-                    rip.next(),
+                    rollback,
                 ))
                 .id();
 
@@ -766,7 +838,17 @@ pub fn shoot_fireballs(
             debug!(
                 "Spawned fireball {:?} by {:?} ammo {:?}, ready {:?}",
                 fireball_id, player, ammo.0, ready.0
-            )
+            );
+
+            // spawn desired audio clip
+            commands.spawn(RollbackSoundBundle {
+                sound: RollbackSound {
+                    clip: sounds.fireball_shot.clone(),
+                    start_frame: frame.0,
+                    sub_key: fireball_id.index(),
+                },
+                rollback: rip.next(),
+            });
         }
     }
 }
