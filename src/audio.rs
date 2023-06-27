@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::player::components::Expired;
-use crate::{AppState, FPS};
+use crate::{AppState, GameState, FPS};
 use bevy::core::FrameCount;
 use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
@@ -21,7 +21,8 @@ impl Plugin for InternalAudioPlugin {
             .add_system(init_audio.in_schedule(OnExit(AppState::Loading)))
             .add_system(sync_rollback_sounds)
             .add_system(remove_finished_sounds)
-            .add_system(update_looped_sounds);
+            .add_system(update_looped_sounds)
+            .add_system(stop_all_sounds.in_schedule(OnEnter(GameState::Paused)));
     }
 }
 
@@ -182,5 +183,11 @@ fn update_looped_sounds(
                 instance.stop(AudioTween::linear(Duration::from_secs_f32(sound.fade_out)));
             }
         };
+    }
+}
+
+fn stop_all_sounds(mut sounds: ResMut<Assets<AudioInstance>>) {
+    for sound in sounds.iter_mut() {
+        sound.1.stop(AudioTween::default());
     }
 }
