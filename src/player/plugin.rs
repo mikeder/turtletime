@@ -47,6 +47,7 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 (
                     apply_inputs,
+                    set_walking_sound,
                     apply_player_sprint,
                     move_players,
                     checksum_players,

@@ -208,6 +208,7 @@ pub fn camera_follow(
     player_query: Query<(&Transform, &Player), Without<Fireball>>,
     mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera>)>,
 ) {
+    // todo: follow another player when local player dies
     let player_handle = match player_handle {
         Some(handle) => handle.0,
         None => return, // Session hasn't started yet
@@ -234,8 +235,14 @@ pub fn spawn_players(
     player_count: Res<PlayerCount>,
     mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
+    local_handle: Option<Res<LocalHandle>>,
 ) {
     trace!("spawn_players");
+
+    let local_handle = match local_handle {
+        Some(handle) => handle.0,
+        None => return, // Session hasn't started yet
+    };
 
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
@@ -245,52 +252,68 @@ pub fn spawn_players(
 
     for handle in 0..player_count.0 {
         let name = format!("Player {}", handle);
-        commands.spawn((
-            Name::new(name),
-            SpriteSheetBundle {
-                sprite: sprite.clone(),
-                texture_atlas: characters.turtle_handle.clone(),
-                transform: Transform {
-                    translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
+        let player_id = commands
+            .spawn((
+                Name::new(name),
+                SpriteSheetBundle {
+                    sprite: sprite.clone(),
+                    texture_atlas: characters.turtle_handle.clone(),
+                    transform: Transform {
+                        translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-            FrameAnimation {
-                timer: Timer::from_seconds(0.2, TimerMode::Repeating),
-                frames: characters.turtle_frames.to_vec(),
-                current_frame: 0,
-            },
-            Player {
-                handle,
-                ..Default::default()
-            },
-            FireballAmmo::default(),
-            FireballReady::default(),
-            PlayerControls::default(),
-            PlayerHealth::default(),
-            PlayerSpeed::default(),
-            PlayerSpeedBoost::default(),
-            Checksum::default(),
-            RoundComponent,
-            FadedLoopSound {
+                FrameAnimation {
+                    timer: Timer::from_seconds(0.2, TimerMode::Repeating),
+                    frames: characters.turtle_frames.to_vec(),
+                    current_frame: 0,
+                },
+                Player {
+                    handle,
+                    ..Default::default()
+                },
+                FireballAmmo::default(),
+                FireballReady::default(),
+                PlayerControls::default(),
+                PlayerHealth::default(),
+                PlayerSpeed::default(),
+                PlayerSpeedBoost::default(),
+                Checksum::default(),
+                RoundComponent,
+                rip.next(),
+            ))
+            .id();
+
+        if handle == local_handle {
+            // add walking sound component to local player only
+            commands.entity(player_id).insert(FadedLoopSound {
                 audio_instance: None,
                 clip: sounds.walking.clone(),
                 fade_in: 0.1,
                 fade_out: 0.1,
                 should_play: false,
-            },
-            rip.next(),
-        ));
+            });
+        }
     }
     commands.insert_resource(PlayersReady);
 }
 
+pub fn set_walking_sound(mut query: Query<(&mut FadedLoopSound, &PlayerControls)>) {
+    for (mut sound, controls) in query.iter_mut() {
+        if controls.dir == Vec2::ZERO {
+            sound.should_play = false
+        } else {
+            sound.should_play = true
+        }
+    }
+}
+
 pub fn apply_inputs(
-    mut query: Query<(&mut PlayerControls, &Player, &mut FadedLoopSound)>,
+    mut query: Query<(&mut PlayerControls, &Player)>,
     inputs: Res<PlayerInputs<GGRSConfig>>,
 ) {
-    for (mut pc, p, mut sound) in query.iter_mut() {
+    for (mut pc, p) in query.iter_mut() {
         let input = match inputs[p.handle].1 {
             InputStatus::Confirmed => inputs[p.handle].0.input,
             InputStatus::Predicted => inputs[p.handle].0.input,
@@ -314,9 +337,6 @@ pub fn apply_inputs(
 
         if direction != Vec2::ZERO {
             pc.last_dir = pc.dir;
-            sound.should_play = true
-        } else {
-            sound.should_play = false
         }
 
         if input & INPUT_FIRE != 0 {
