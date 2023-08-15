@@ -1,5 +1,5 @@
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_ggrs::RollbackIdProvider;
+use bevy_ggrs::AddRollbackCommandExtension;
 use rand::Rng;
 
 use crate::{
@@ -19,7 +19,6 @@ use super::components::GOOSE_SPEED;
 pub fn spawn_geese(
     mut commands: Commands,
     characters: Res<CharacterSheet>,
-    mut rip: ResMut<RollbackIdProvider>,
     mut agreed_seed: ResMut<AgreedRandom>,
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
 ) {
@@ -32,26 +31,27 @@ pub fn spawn_geese(
     let mut sprite = TextureAtlasSprite::new(characters.goose_frames[0]);
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
 
-    commands.spawn((
-        Name::new("Goose"),
-        SpriteSheetBundle {
-            sprite,
-            texture_atlas: characters.goose_handle.clone(),
-            transform: Transform {
-                translation: Vec3::new(pos.x, pos.y, 1.),
+    commands
+        .spawn((
+            Name::new("Goose"),
+            SpriteSheetBundle {
+                sprite,
+                texture_atlas: characters.goose_handle.clone(),
+                transform: Transform {
+                    translation: Vec3::new(pos.x, pos.y, 1.),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },
-        FrameAnimation {
-            timer: Timer::from_seconds(0.2, TimerMode::Repeating),
-            frames: characters.goose_frames.to_vec(),
-            current_frame: 0,
-        },
-        Goose,
-        RoundComponent,
-        rip.next(),
-    ));
+            FrameAnimation {
+                timer: Timer::from_seconds(0.2, TimerMode::Repeating),
+                frames: characters.goose_frames.to_vec(),
+                current_frame: 0,
+            },
+            Goose,
+            RoundComponent,
+        ))
+        .add_rollback();
 }
 
 pub fn geese_target_closest_edible(

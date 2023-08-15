@@ -77,22 +77,26 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<AppState>()
             .add_state::<GameState>()
-            .add_plugin(AsciiPlugin)
-            .add_plugin(LoadingPlugin)
-            .add_plugin(GraphicsPlugin)
-            .add_plugin(TileMapPlugin)
-            .add_plugin(MenuPlugin)
-            .add_plugin(InternalAudioPlugin)
-            .add_plugin(PlayerPlugin)
-            .add_plugin(GoosePlugin)
-            .add_plugin(ConsolePlugin);
+            .add_plugins((
+                AsciiPlugin,
+                LoadingPlugin,
+                GraphicsPlugin,
+                TileMapPlugin,
+                MenuPlugin,
+                InternalAudioPlugin,
+                PlayerPlugin,
+                GoosePlugin,
+                ConsolePlugin,
+            ));
 
         #[cfg(debug_assertions)]
         {
             // With FPS
-            app.add_plugin(FrameTimeDiagnosticsPlugin::default())
-                .add_plugin(DebugPlugin)
-                .add_plugin(LogDiagnosticsPlugin::default());
+            app.add_plugins((
+                FrameTimeDiagnosticsPlugin::default(),
+                DebugPlugin,
+                LogDiagnosticsPlugin::default(),
+            ));
 
             // Without FPS
             // app.add_plugin(DebugPlugin)

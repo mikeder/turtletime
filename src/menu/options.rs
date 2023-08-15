@@ -22,7 +22,10 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: UiRect::all(Val::Px(0.)),
+                left: Val::Px(0.),
+                right: Val::Px(0.),
+                top: Val::Px(0.),
+                bottom: Val::Px(0.),
                 flex_direction: FlexDirection::Column,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
@@ -79,7 +82,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: UiRect::all(Val::Px(16.)),
@@ -112,7 +116,7 @@ pub fn btn_listeners(
     mut interaction_query: Query<(&Interaction, &MenuOptionsBtn), Changed<Interaction>>,
 ) {
     for (interaction, btn) in interaction_query.iter_mut() {
-        if let Interaction::Clicked = *interaction {
+        if let Interaction::Pressed = *interaction {
             match btn {
                 MenuOptionsBtn::Back => {
                     state.set(AppState::MenuMain);
@@ -130,7 +134,7 @@ pub fn btn_visuals(
 ) {
     for (interaction, mut color) in interaction_query.iter_mut() {
         match *interaction {
-            Interaction::Clicked => {
+            Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
             }
             Interaction::Hovered => {

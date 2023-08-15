@@ -41,7 +41,10 @@ pub fn setup_ui(
         .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: UiRect::all(Val::Px(0.)),
+                left: Val::Px(0.),
+                right: Val::Px(0.),
+                top: Val::Px(0.),
+                bottom: Val::Px(0.),
                 flex_direction: FlexDirection::Column,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
@@ -68,7 +71,8 @@ pub fn setup_ui(
             // logo
             parent.spawn(ImageBundle {
                 style: Style {
-                    size: Size::new(Val::Px(128.0), Val::Px(128.0)),
+                    width: Val::Px(128.0),
+                    height: Val::Px(128.0),
                     margin: UiRect::all(Val::Px(16.)),
                     padding: UiRect::all(Val::Px(16.)),
                     ..Default::default()
@@ -81,7 +85,8 @@ pub fn setup_ui(
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: UiRect::all(Val::Px(16.)),
@@ -110,7 +115,8 @@ pub fn setup_ui(
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: UiRect::all(Val::Px(16.)),
@@ -139,7 +145,8 @@ pub fn setup_ui(
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: UiRect::all(Val::Px(16.)),
@@ -168,7 +175,8 @@ pub fn setup_ui(
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(200.0), Val::Px(65.0)),
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: UiRect::all(Val::Px(16.)),
@@ -216,7 +224,7 @@ pub fn btn_visuals(
 ) {
     for (interaction, mut color) in interaction_query.iter_mut() {
         match *interaction {
-            Interaction::Clicked => {
+            Interaction::Pressed => {
                 *color = PRESSED_BUTTON.into();
             }
             Interaction::Hovered => {
@@ -238,7 +246,7 @@ pub fn btn_listeners(
     mut interaction_query: Query<(&Interaction, &MainMenuBtn), Changed<Interaction>>,
 ) {
     for (interaction, btn) in interaction_query.iter_mut() {
-        if let Interaction::Clicked = *interaction {
+        if let Interaction::Pressed = *interaction {
             match btn {
                 MainMenuBtn::OnlineMatch => {
                     app_state.set(AppState::MenuOnline);
@@ -287,7 +295,7 @@ fn create_synctest_session(commands: &mut Commands, num_players: usize) {
 
     let sess = sess_build.start_synctest_session().expect("");
 
-    commands.insert_resource(Session::SyncTestSession(sess));
+    commands.insert_resource(Session::SyncTest(sess));
     commands.insert_resource(LocalHandle(0));
     commands.insert_resource(AgreedRandom::new(peers));
 }

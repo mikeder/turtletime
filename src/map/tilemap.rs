@@ -20,9 +20,9 @@ pub struct TileCollider;
 
 impl Plugin for TileMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::spawn_map.in_schedule(OnExit(AppState::Loading)))
-            .add_system(Self::show_map.in_schedule(OnEnter(GameState::Playing)))
-            .add_system(Self::hide_map.in_schedule(OnEnter(GameState::Paused)));
+        app.add_systems(OnExit(AppState::Loading), Self::spawn_map)
+            .add_systems(OnEnter(GameState::Playing), Self::show_map)
+            .add_systems(OnEnter(GameState::Paused), Self::hide_map);
     }
 }
 

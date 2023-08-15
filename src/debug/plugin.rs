@@ -22,7 +22,7 @@ pub struct DebugPlugin;
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         if cfg!(debug_assertions) {
-            app.add_plugin(WorldInspectorPlugin::new())
+            app.add_plugins(WorldInspectorPlugin::new())
                 .register_type::<Checksum>()
                 .register_type::<ConsoleReady>()
                 .register_type::<LocalHandle>()
@@ -39,13 +39,25 @@ pub struct ConsolePlugin;
 
 impl Plugin for ConsolePlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(setup_ui.in_schedule(OnExit(AppState::Loading)))
-            .add_system(log_ggrs_events.in_set(OnUpdate(GameState::Playing)))
-            .add_system(open_console)
-            .add_system(count_edibles.run_if(resource_exists::<EdibleCount>()))
-            .add_system(update_console_text.run_if(resource_exists::<PeerInfo>()))
-            .add_system(reset_console_ready.run_if(resource_exists::<PeerInfo>()))
-            .add_system(update_peer_info.run_if(resource_exists::<Session<GGRSConfig>>()));
+        app.add_systems(OnExit(AppState::Loading), setup_ui)
+            .add_systems(Update, log_ggrs_events.run_if(in_state(GameState::Playing)))
+            .add_systems(Update, open_console)
+            .add_systems(
+                Update,
+                count_edibles.run_if(resource_exists::<EdibleCount>()),
+            )
+            .add_systems(
+                Update,
+                update_console_text.run_if(resource_exists::<PeerInfo>()),
+            )
+            .add_systems(
+                Update,
+                reset_console_ready.run_if(resource_exists::<PeerInfo>()),
+            )
+            .add_systems(
+                Update,
+                update_peer_info.run_if(resource_exists::<Session<GGRSConfig>>()),
+            );
     }
 }
 
@@ -63,7 +75,7 @@ pub fn update_peer_info(
     if timer.0.tick(time.delta()).just_finished() {
         let mut tmp = String::new();
         match session.as_ref() {
-            Session::P2PSession(s) => {
+            Session::P2P(s) => {
                 for player_handle in s.remote_player_handles() {
                     let stats = match s.network_stats(player_handle) {
                         Ok(res) => {
@@ -80,7 +92,7 @@ pub fn update_peer_info(
                     tmp.push_str("\n");
                 }
             }
-            Session::SyncTestSession(s) => {
+            Session::SyncTest(s) => {
                 let line = format!("Local players {}", s.num_players());
                 tmp.reserve(line.len() + 1);
                 tmp.push_str("\n");
@@ -95,7 +107,7 @@ pub fn update_peer_info(
 
 pub fn log_ggrs_events(mut session: ResMut<Session<GGRSConfig>>) {
     match session.as_mut() {
-        Session::P2PSession(s) => {
+        Session::P2P(s) => {
             for event in s.events() {
                 info!("GGRS Event: {:?}", event);
             }

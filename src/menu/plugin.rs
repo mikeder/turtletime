@@ -17,14 +17,16 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app
             // main menu
-            .add_system(main::setup_ui.in_schedule(OnEnter(AppState::MenuMain)))
+            .add_systems(OnEnter(AppState::MenuMain), main::setup_ui)
             .add_systems(
-                (main::btn_visuals, main::btn_listeners).in_set(OnUpdate(AppState::MenuMain)),
+                Update,
+                (main::btn_visuals, main::btn_listeners).run_if(in_state(AppState::MenuMain)),
             )
-            .add_system(main::cleanup_ui.in_schedule(OnExit(AppState::MenuMain)))
+            .add_systems(OnExit(AppState::MenuMain), main::cleanup_ui)
             //online menu
-            .add_system(online::setup_ui.in_schedule(OnEnter(AppState::MenuOnline)))
+            .add_systems(OnEnter(AppState::MenuOnline), online::setup_ui)
             .add_systems(
+                Update,
                 (
                     online::update_lobby_id,
                     online::update_lobby_id_display,
@@ -33,33 +35,38 @@ impl Plugin for MenuPlugin {
                     online::btn_listeners,
                     online::update_player_count_display,
                 )
-                    .in_set(OnUpdate(AppState::MenuOnline)),
+                    .run_if(in_state(AppState::MenuOnline)),
             )
-            .add_system(online::cleanup_ui.in_schedule(OnExit(AppState::MenuOnline)))
+            .add_systems(OnExit(AppState::MenuOnline), online::cleanup_ui)
             // connect menu
             .add_systems(
-                (connect::create_matchbox_socket, connect::setup_ui)
-                    .in_schedule(OnEnter(AppState::MenuConnect)),
+                OnEnter(AppState::MenuConnect),
+                (connect::create_matchbox_socket, connect::setup_ui),
             )
             .add_systems(
+                Update,
                 (
                     connect::lobby_system,
                     connect::btn_visuals,
                     connect::btn_listeners,
                 )
-                    .in_set(OnUpdate(AppState::MenuConnect)),
+                    .run_if(in_state(AppState::MenuConnect)),
             )
-            .add_system(connect::cleanup_ui.in_schedule(OnExit(AppState::MenuConnect)))
+            .add_systems(OnExit(AppState::MenuConnect), connect::cleanup_ui)
             // options menu
-            .add_system(options::setup_ui.in_schedule(OnEnter(AppState::MenuOptions)))
+            .add_systems(OnEnter(AppState::MenuOptions), options::setup_ui)
             .add_systems(
+                Update,
                 (options::btn_visuals, options::btn_listeners)
-                    .in_set(OnUpdate(AppState::MenuOptions)),
+                    .run_if(in_state(AppState::MenuOptions)),
             )
-            .add_system(options::cleanup_ui.in_schedule(OnExit(AppState::MenuOptions)))
+            .add_systems(OnExit(AppState::MenuOptions), options::cleanup_ui)
             // win menu
-            .add_system(win::setup_ui.in_schedule(OnEnter(AppState::Win)))
-            .add_systems((win::btn_visuals, win::btn_listeners).in_set(OnUpdate(AppState::Win)))
-            .add_system(win::cleanup_ui.in_schedule(OnExit(AppState::Win)));
+            .add_systems(OnEnter(AppState::Win), win::setup_ui)
+            .add_systems(
+                Update,
+                (win::btn_visuals, win::btn_listeners).run_if(in_state(AppState::Win)),
+            )
+            .add_systems(OnExit(AppState::Win), win::cleanup_ui);
     }
 }

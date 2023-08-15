@@ -23,8 +23,8 @@ pub struct Border;
 
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(Self::load_graphics.in_schedule(OnEnter(AppState::MenuMain)))
-            .add_system(Self::frame_animation);
+        app.add_systems(OnEnter(AppState::MenuMain), Self::load_graphics)
+            .add_systems(Update, Self::frame_animation);
     }
 }
 

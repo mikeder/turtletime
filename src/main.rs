@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
-use bevy_ggrs::GGRSPlugin;
+use bevy_ggrs::GgrsPlugin;
 use std::io::Cursor;
 use turtle_time::npc::components::{EdibleTarget, Goose, HasTarget};
 use turtle_time::player::checksum::Checksum;
@@ -21,7 +21,7 @@ use winit::window::Icon;
 fn main() {
     let mut app = App::new();
 
-    GGRSPlugin::<GGRSConfig>::new()
+    GgrsPlugin::<GGRSConfig>::new()
         .with_update_frequency(FPS)
         .with_input_system(input)
         .register_rollback_component::<Checksum>()
@@ -68,8 +68,8 @@ fn main() {
                     level: bevy::log::Level::WARN,
                 }),
         )
-        .add_plugin(GamePlugin)
-        .add_system(set_window_icon.on_startup())
+        .add_plugins(GamePlugin)
+        .add_systems(Startup, set_window_icon)
         .run();
 }
 

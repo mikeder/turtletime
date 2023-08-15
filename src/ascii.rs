@@ -11,7 +11,7 @@ pub struct AsciiText;
 
 impl Plugin for AsciiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(load_ascii);
+        app.add_systems(Startup, load_ascii);
     }
 }
 

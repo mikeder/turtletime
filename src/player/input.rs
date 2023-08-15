@@ -56,7 +56,7 @@ pub fn input(_: In<ggrs::PlayerHandle>, keys: Res<Input<KeyCode>>) -> PlayerInpu
     if keys.any_pressed([KeyCode::Escape, KeyCode::Delete]) {
         input |= INPUT_EXIT;
     }
-    if keys.pressed(KeyCode::LShift) {
+    if keys.pressed(KeyCode::ShiftLeft) {
         input |= INPUT_SPRINT;
     }
 
