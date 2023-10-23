@@ -26,6 +26,7 @@ use bevy::diagnostic::LogDiagnosticsPlugin;
 pub const ASPECT_RATIO: f32 = 16.0 / 9.0;
 pub const MAP_HEIGHT: f32 = 768.0;
 pub const TILE_SIZE: f32 = 32.0;
+pub const HEALTH_BAR_Y_OFFSET: f32 = TILE_SIZE + 10.;
 pub const FPS: usize = 60;
 pub const FIXED_TICK_MS: u64 = 1000 / FPS as u64; // use fixed duration tick delta to keep in sync with GGRSSchedule
 
@@ -77,22 +78,26 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<AppState>()
             .add_state::<GameState>()
-            .add_plugin(AsciiPlugin)
-            .add_plugin(LoadingPlugin)
-            .add_plugin(GraphicsPlugin)
-            .add_plugin(TileMapPlugin)
-            .add_plugin(MenuPlugin)
-            .add_plugin(InternalAudioPlugin)
-            .add_plugin(PlayerPlugin)
-            .add_plugin(GoosePlugin)
-            .add_plugin(ConsolePlugin);
+            .add_plugins((
+                AsciiPlugin,
+                LoadingPlugin,
+                GraphicsPlugin,
+                TileMapPlugin,
+                MenuPlugin,
+                InternalAudioPlugin,
+                PlayerPlugin,
+                GoosePlugin,
+                ConsolePlugin,
+            ));
 
         #[cfg(debug_assertions)]
         {
             // With FPS
-            app.add_plugin(FrameTimeDiagnosticsPlugin::default())
-                .add_plugin(DebugPlugin)
-                .add_plugin(LogDiagnosticsPlugin::default());
+            app.add_plugins((
+                FrameTimeDiagnosticsPlugin::default(),
+                DebugPlugin,
+                LogDiagnosticsPlugin::default(),
+            ));
 
             // Without FPS
             // app.add_plugin(DebugPlugin)

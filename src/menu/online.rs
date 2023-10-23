@@ -49,7 +49,10 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: UiRect::all(Val::Px(0.)),
+                left: Val::Px(0.),
+                right: Val::Px(0.),
+                top: Val::Px(0.),
+                bottom: Val::Px(0.),
                 flex_direction: FlexDirection::Column,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,
@@ -106,7 +109,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                     parent
                         .spawn(ButtonBundle {
                             style: Style {
-                                size: Size::new(Val::Px(100.0), Val::Px(65.0)),
+                                width: Val::Px(100.0),
+                                height: Val::Px(65.0),
                                 justify_content: JustifyContent::Center,
                                 align_items: AlignItems::Center,
                                 margin: UiRect::all(Val::Px(16.)),
@@ -134,7 +138,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                     parent
                         .spawn(ButtonBundle {
                             style: Style {
-                                size: Size::new(Val::Px(100.0), Val::Px(65.0)),
+                                width: Val::Px(100.0),
+                                height: Val::Px(65.0),
                                 justify_content: JustifyContent::Center,
                                 align_items: AlignItems::Center,
                                 margin: UiRect::all(Val::Px(16.)),
@@ -164,7 +169,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: UiRect::all(Val::Px(16.)),
@@ -226,7 +232,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: UiRect::all(Val::Px(16.)),
@@ -256,7 +263,8 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
             parent
                 .spawn(ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+                        width: Val::Px(250.0),
+                        height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         margin: UiRect::all(Val::Px(16.)),
@@ -341,7 +349,7 @@ pub fn btn_visuals(
         };
         if changeable {
             match *interaction {
-                Interaction::Clicked => {
+                Interaction::Pressed => {
                     *color = PRESSED_BUTTON.into();
                 }
                 Interaction::Hovered => {
@@ -377,7 +385,7 @@ pub fn btn_listeners(
             continue;
         }
 
-        if let Interaction::Clicked = *interaction {
+        if let Interaction::Pressed = *interaction {
             match btn {
                 MenuOnlineBtn::PlayerCountUP => {
                     if player_count.0 < MAX_PLAYERS {

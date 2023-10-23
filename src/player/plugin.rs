@@ -7,7 +7,7 @@ use super::round::{
 use crate::player::systems::*;
 use crate::{AppState, GameState};
 use bevy::prelude::*;
-use bevy_ggrs::GGRSSchedule;
+use bevy_ggrs::GgrsSchedule;
 
 pub struct PlayerPlugin;
 
@@ -18,22 +18,27 @@ impl Plugin for PlayerPlugin {
         app.init_resource::<EdibleSpawnTimer>()
             // round setup
             .add_systems(
-                (setup_round, create_ui, spawn_players)
-                    .in_set(SpawnSystemSet)
-                    .in_schedule(OnEnter(GameState::Playing)),
+                OnEnter(GameState::Playing),
+                (setup_round, create_ui, spawn_players).in_set(SpawnSystemSet),
             )
-            .add_system(add_player_health_bars.run_if(resource_added::<PlayersReady>()))
-            .add_system(update_health_bars.run_if(resource_exists::<HealthBarsAdded>()))
-            .add_system(camera_follow.run_if(in_state(GameState::Playing)))
-            // round cleanup
-            .add_system(disconnect_remote_players.in_schedule(OnExit(AppState::RoundOnline)))
             .add_systems(
-                (cleanup_session, cleanup_round)
-                    .chain()
-                    .in_schedule(OnEnter(AppState::Win)),
+                Update,
+                add_player_health_bars.run_if(resource_added::<PlayersReady>()),
+            )
+            .add_systems(
+                Update,
+                update_health_bars.run_if(resource_exists::<HealthBarsAdded>()),
+            )
+            .add_systems(Update, camera_follow.run_if(in_state(GameState::Playing)))
+            // round cleanup
+            .add_systems(OnExit(AppState::RoundOnline), disconnect_remote_players)
+            .add_systems(
+                OnEnter(AppState::Win),
+                (cleanup_session, cleanup_round).chain(),
             )
             // stateless timers and UI text updates
             .add_systems(
+                Update,
                 (
                     check_win_state,
                     update_player_health_text,
@@ -45,6 +50,7 @@ impl Plugin for PlayerPlugin {
             // these systems will be executed as part of the advance frame update
             // player rollback systems
             .add_systems(
+                GgrsSchedule,
                 (
                     apply_inputs,
                     set_walking_sound,
@@ -61,11 +67,11 @@ impl Plugin for PlayerPlugin {
                 )
                     .chain()
                     .in_set(PlayerSystemSet)
-                    .distributive_run_if(in_state(GameState::Playing))
-                    .in_schedule(GGRSSchedule),
+                    .distributive_run_if(in_state(GameState::Playing)),
             )
             // edible rollback systems
             .add_systems(
+                GgrsSchedule,
                 (
                     spawn_strawberry_over_time,
                     spawn_chili_pepper_over_time,
@@ -84,8 +90,7 @@ impl Plugin for PlayerPlugin {
                     .in_set(EdibleSystemSet)
                     .after(SpawnSystemSet)
                     .after(PlayerSystemSet)
-                    .distributive_run_if(in_state(GameState::Playing))
-                    .in_schedule(GGRSSchedule),
+                    .distributive_run_if(in_state(GameState::Playing)),
             );
     }
 }

@@ -25,15 +25,14 @@ use crate::menu::online::PlayerCount;
 use crate::menu::win::MatchData;
 use crate::player::components::Expired;
 use crate::player::resources::PlayersReady;
-use crate::{AppState, FIXED_TICK_MS, FPS};
+use crate::{AppState, FIXED_TICK_MS, FPS, HEALTH_BAR_Y_OFFSET};
 use crate::{GameState, TILE_SIZE};
 use bevy::core::FrameCount;
 use bevy::math::vec3;
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
-use bevy_ggrs::PlayerInputs;
 use bevy_ggrs::Rollback;
-use bevy_ggrs::RollbackIdProvider;
+use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs};
 use ggrs::InputStatus;
 use rand::Rng;
 
@@ -56,12 +55,10 @@ pub fn create_ui(
         .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: UiRect {
-                    left: Val::Auto,
-                    right: Val::Px(10.),
-                    top: Val::Px(10.),
-                    bottom: Val::Auto,
-                },
+                left: Val::Auto,
+                right: Val::Px(10.),
+                top: Val::Px(10.),
+                bottom: Val::Auto,
                 flex_direction: FlexDirection::Column,
                 align_content: AlignContent::Start,
                 align_items: AlignItems::Center,
@@ -233,7 +230,6 @@ pub fn spawn_players(
     sounds: Res<AudioAssets>,
     characters: Res<CharacterSheet>,
     player_count: Res<PlayerCount>,
-    mut rip: ResMut<RollbackIdProvider>,
     spawn_query: Query<&mut PlayerSpawn>,
     local_handle: Option<Res<LocalHandle>>,
 ) {
@@ -281,8 +277,8 @@ pub fn spawn_players(
                 PlayerSpeedBoost::default(),
                 Checksum::default(),
                 RoundComponent,
-                rip.next(),
             ))
+            .add_rollback()
             .id();
 
         if handle == local_handle {
@@ -438,8 +434,6 @@ pub fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> 
 
 pub fn player_poops(
     mut commands: Commands,
-    mut rip: ResMut<RollbackIdProvider>,
-
     frame: Res<FrameCount>,
     sounds: Res<AudioAssets>,
     textures: Res<TextureAssets>,
@@ -471,19 +465,20 @@ pub fn player_poops(
                         texture: textures.texture_poop.clone(),
                         ..Default::default()
                     },
-                    rip.next(),
                 ))
+                .add_rollback()
                 .id();
 
             // spawn desired audio clip
-            commands.spawn(RollbackSoundBundle {
-                sound: RollbackSound {
-                    clip: sounds.sprinting.clone(),
-                    start_frame: frame.0,
-                    sub_key: poop_instance.index(),
-                },
-                rollback: rip.next(),
-            });
+            commands
+                .spawn(RollbackSoundBundle {
+                    sound: RollbackSound {
+                        clip: sounds.sprinting.clone(),
+                        start_frame: frame.0,
+                        sub_key: poop_instance.index(),
+                    },
+                })
+                .add_rollback();
         }
     }
 }
@@ -554,7 +549,6 @@ pub fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>) {
 pub fn spawn_strawberry_over_time(
     mut commands: Commands,
     mut agreed_seed: ResMut<AgreedRandom>,
-    mut rip: ResMut<RollbackIdProvider>,
     asset_server: Res<TextureAssets>,
     timer: Res<EdibleSpawnTimer>,
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
@@ -565,17 +559,18 @@ pub fn spawn_strawberry_over_time(
         let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
-        commands.spawn((
-            Name::new("Strawberry"),
-            Edible::Strawberry,
-            RoundComponent,
-            SpriteBundle {
-                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
-                texture: asset_server.texture_strawberry.clone(),
-                ..Default::default()
-            },
-            rip.next(),
-        ));
+        commands
+            .spawn((
+                Name::new("Strawberry"),
+                Edible::Strawberry,
+                RoundComponent,
+                SpriteBundle {
+                    transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
+                    texture: asset_server.texture_strawberry.clone(),
+                    ..Default::default()
+                },
+            ))
+            .add_rollback();
     }
 }
 
@@ -584,7 +579,6 @@ pub fn player_ate_strawberry_system(
     mut commands: Commands,
     frame: Res<FrameCount>,
     sounds: Res<AudioAssets>,
-    mut rip: ResMut<RollbackIdProvider>,
     mut player_query: Query<(&Transform, &mut PlayerSpeedBoost), With<Player>>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
 ) {
@@ -606,14 +600,15 @@ pub fn player_ate_strawberry_system(
                 commands.entity(*s).insert(Expired);
 
                 // spawn desired audio clip
-                commands.spawn(RollbackSoundBundle {
-                    sound: RollbackSound {
-                        clip: sounds.pickup.clone(),
-                        start_frame: frame.0,
-                        sub_key: s.index(),
-                    },
-                    rollback: rip.next(),
-                });
+                commands
+                    .spawn(RollbackSoundBundle {
+                        sound: RollbackSound {
+                            clip: sounds.pickup.clone(),
+                            start_frame: frame.0,
+                            sub_key: s.index(),
+                        },
+                    })
+                    .add_rollback();
             }
         }
     }
@@ -622,7 +617,6 @@ pub fn player_ate_strawberry_system(
 pub fn spawn_chili_pepper_over_time(
     mut commands: Commands,
     mut agreed_seed: ResMut<AgreedRandom>,
-    mut rip: ResMut<RollbackIdProvider>,
     asset_server: Res<TextureAssets>,
     timer: Res<EdibleSpawnTimer>,
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
@@ -633,21 +627,22 @@ pub fn spawn_chili_pepper_over_time(
         let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
-        commands.spawn((
-            Name::new("ChiliPepper"),
-            Edible::ChiliPepper,
-            RoundComponent,
-            SpriteBundle {
-                sprite: Sprite {
-                    custom_size: Some(Vec2::splat(CHILI_PEPPER_SIZE * 1.5)),
+        commands
+            .spawn((
+                Name::new("ChiliPepper"),
+                Edible::ChiliPepper,
+                RoundComponent,
+                SpriteBundle {
+                    sprite: Sprite {
+                        custom_size: Some(Vec2::splat(CHILI_PEPPER_SIZE * 1.5)),
+                        ..Default::default()
+                    },
+                    transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
+                    texture: asset_server.texture_chili_pepper.clone(),
                     ..Default::default()
                 },
-                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
-                texture: asset_server.texture_chili_pepper.clone(),
-                ..Default::default()
-            },
-            rip.next(),
-        ));
+            ))
+            .add_rollback();
     }
 }
 
@@ -656,8 +651,6 @@ pub fn player_ate_chili_pepper_system(
     mut commands: Commands,
     frame: Res<FrameCount>,
     sounds: Res<AudioAssets>,
-    mut rip: ResMut<RollbackIdProvider>,
-
     mut player_query: Query<(&Transform, &mut FireballAmmo), (With<Player>, Without<Fireball>)>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
 ) {
@@ -679,14 +672,15 @@ pub fn player_ate_chili_pepper_system(
                 commands.entity(*s).insert(Expired);
 
                 // spawn desired audio clip
-                commands.spawn(RollbackSoundBundle {
-                    sound: RollbackSound {
-                        clip: sounds.pickup.clone(),
-                        start_frame: frame.0,
-                        sub_key: s.index(),
-                    },
-                    rollback: rip.next(),
-                });
+                commands
+                    .spawn(RollbackSoundBundle {
+                        sound: RollbackSound {
+                            clip: sounds.pickup.clone(),
+                            start_frame: frame.0,
+                            sub_key: s.index(),
+                        },
+                    })
+                    .add_rollback();
             }
         }
     }
@@ -695,7 +689,6 @@ pub fn player_ate_chili_pepper_system(
 pub fn spawn_lettuce_over_time(
     mut commands: Commands,
     mut agreed_seed: ResMut<AgreedRandom>,
-    mut rip: ResMut<RollbackIdProvider>,
     asset_server: Res<TextureAssets>,
     timer: Res<EdibleSpawnTimer>,
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
@@ -706,24 +699,24 @@ pub fn spawn_lettuce_over_time(
         let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
-        commands.spawn((
-            Name::new("Lettuce"),
-            Edible::Lettuce,
-            RoundComponent,
-            SpriteBundle {
-                transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
-                texture: asset_server.texture_lettuce.clone(),
-                ..Default::default()
-            },
-            rip.next(),
-        ));
+        commands
+            .spawn((
+                Name::new("Lettuce"),
+                Edible::Lettuce,
+                RoundComponent,
+                SpriteBundle {
+                    transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
+                    texture: asset_server.texture_lettuce.clone(),
+                    ..Default::default()
+                },
+            ))
+            .add_rollback();
     }
 }
 
 pub fn player_ate_lettuce_system(
     mut commands: Commands,
     frame: Res<FrameCount>,
-    mut rip: ResMut<RollbackIdProvider>,
     sounds: Res<AudioAssets>,
     mut player_query: Query<(&Transform, &mut PlayerHealth), (With<Player>, Without<Fireball>)>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
@@ -749,14 +742,15 @@ pub fn player_ate_lettuce_system(
                 commands.entity(*s).insert(Expired);
 
                 // spawn desired audio clip
-                commands.spawn(RollbackSoundBundle {
-                    sound: RollbackSound {
-                        clip: sounds.pickup.clone(),
-                        start_frame: frame.0,
-                        sub_key: s.index(),
-                    },
-                    rollback: rip.next(),
-                });
+                commands
+                    .spawn(RollbackSoundBundle {
+                        sound: RollbackSound {
+                            clip: sounds.pickup.clone(),
+                            start_frame: frame.0,
+                            sub_key: s.index(),
+                        },
+                    })
+                    .add_rollback();
             }
         }
     }
@@ -778,7 +772,6 @@ pub fn reload_fireballs(
 
 pub fn shoot_fireballs(
     mut commands: Commands,
-    mut rip: ResMut<RollbackIdProvider>,
     images: Res<TextureAssets>,
     sounds: Res<AudioAssets>,
     frame: Res<FrameCount>,
@@ -829,7 +822,6 @@ pub fn shoot_fireballs(
                 player, ammo.0, ready.0
             );
 
-            let rollback = rip.next();
             let fireball_id = commands
                 .spawn((
                     Name::new("Fireball"),
@@ -848,8 +840,8 @@ pub fn shoot_fireballs(
                         texture: images.texture_fireball.clone(),
                         ..default()
                     },
-                    rollback,
                 ))
+                .add_rollback()
                 .id();
 
             ammo.0 -= 1;
@@ -861,14 +853,15 @@ pub fn shoot_fireballs(
             );
 
             // spawn desired audio clip
-            commands.spawn(RollbackSoundBundle {
-                sound: RollbackSound {
-                    clip: sounds.fireball_shot.clone(),
-                    start_frame: frame.0,
-                    sub_key: fireball_id.index(),
-                },
-                rollback: rip.next(),
-            });
+            commands
+                .spawn(RollbackSoundBundle {
+                    sound: RollbackSound {
+                        clip: sounds.fireball_shot.clone(),
+                        start_frame: frame.0,
+                        sub_key: fireball_id.index(),
+                    },
+                })
+                .add_rollback();
         }
     }
 }
@@ -1036,25 +1029,24 @@ pub fn add_player_health_bars(
                     custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 4.)),
                     ..default()
                 },
-                transform: Transform::from_xyz(0., TILE_SIZE + 10.0, 0.),
+                transform: Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.),
+                ..default()
+            });
+            cb.spawn(SpriteBundle {
+                // red overlay
+                sprite: Sprite {
+                    color: Color::RED,
+                    custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 8.)),
+                    ..default()
+                },
+                transform: Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.2),
                 ..default()
             })
-            .with_children(|parent| {
-                parent
-                    .spawn(SpriteBundle {
-                        // red overlay
-                        sprite: Sprite {
-                            color: Color::RED,
-                            custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 8.)),
-                            ..default()
-                        },
-                        transform: Transform::from_xyz(0., 0., 0.2),
-                        ..default()
-                    })
-                    .insert(PlayerHealthBar { health_entity });
-            });
+            // insert component used to track player health in update system
+            .insert(PlayerHealthBar { health_entity });
         });
     }
+    trace!("insert HealthBarsAdded");
     commands.insert_resource(HealthBarsAdded)
 }
 
@@ -1065,13 +1057,14 @@ pub fn update_health_bars(
     let mut bars = health_bars.iter_mut().collect::<Vec<_>>();
     bars.sort_by_key(|e| e.0);
 
-    for (_, health_bar, mut transform) in bars {
+    for (e, health_bar, mut transform) in bars {
+        trace!("updating health bar for {:?} -> {:?}", e, transform);
         let player_health = health_entities.get(health_bar.health_entity).unwrap();
         let health_percent = player_health.decimal();
-        let h = PLAYER_HEALTH_MAX as f32 * 0.5;
-        let x_offset = h - h * health_percent;
+        let half = PLAYER_HEALTH_MID as f32;
+        let x_offset = half - half * health_percent;
 
         transform.scale = vec3(health_percent as f32, 1.0, 1.0);
-        transform.translation = vec3(-x_offset, 0., 0.2)
+        transform.translation = vec3(-x_offset, HEALTH_BAR_Y_OFFSET, 0.2)
     }
 }

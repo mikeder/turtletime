@@ -51,7 +51,10 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
         .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: UiRect::new(Val::Px(10.), Val::Auto, Val::Px(5.), Val::Auto),
+                left: Val::Px(10.),
+                right: Val::Auto,
+                top: Val::Px(5.),
+                bottom: Val::Auto,
                 flex_direction: FlexDirection::Column,
                 align_content: AlignContent::Center,
                 align_items: AlignItems::Center,

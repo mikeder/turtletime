@@ -29,7 +29,7 @@ pub fn disconnect_remote_players(
 ) {
     trace!("disconnecting remote players...");
     match session.as_mut() {
-        Session::P2PSession(s) => {
+        Session::P2P(s) => {
             for player_handle in s.remote_player_handles() {
                 match s.disconnect_player(player_handle) {
                     Ok(_) => {

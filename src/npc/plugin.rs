@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_ggrs::GGRSSchedule;
+use bevy_ggrs::GgrsSchedule;
 
 use crate::{
     player::plugin::{EdibleSystemSet, PlayerSystemSet, SpawnSystemSet},
@@ -19,8 +19,9 @@ pub struct NpcSystemSet;
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for GoosePlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_geese.in_schedule(OnEnter(GameState::Playing)))
+        app.add_systems(OnEnter(GameState::Playing), spawn_geese)
             .add_systems(
+                GgrsSchedule,
                 (
                     geese_target_closest_edible,
                     move_geese_toward_target,
@@ -31,8 +32,7 @@ impl Plugin for GoosePlugin {
                     .after(EdibleSystemSet)
                     .after(SpawnSystemSet)
                     .after(PlayerSystemSet)
-                    .distributive_run_if(in_state(GameState::Playing))
-                    .in_schedule(GGRSSchedule),
+                    .distributive_run_if(in_state(GameState::Playing)),
             );
     }
 }

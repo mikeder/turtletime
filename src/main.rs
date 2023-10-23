@@ -5,13 +5,13 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
-use bevy_ggrs::GGRSPlugin;
+use bevy_ggrs::{GgrsApp, GgrsPlugin, ReadInputs};
 use std::io::Cursor;
 use turtle_time::npc::components::{EdibleTarget, Goose, HasTarget};
 use turtle_time::player::checksum::Checksum;
 use turtle_time::player::components::{
     Edible, EdibleSpawnTimer, Expired, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Player, PlayerHealth, PlayerPoop, PlayerPoopTimer, PlayerSpeed,
+    FireballTimer, Player, PlayerHealth, PlayerHealthBar, PlayerPoop, PlayerPoopTimer, PlayerSpeed,
     PlayerSpeedBoost, RoundComponent,
 };
 use turtle_time::player::input::{input, GGRSConfig, PlayerControls};
@@ -21,9 +21,10 @@ use winit::window::Icon;
 fn main() {
     let mut app = App::new();
 
-    GGRSPlugin::<GGRSConfig>::new()
-        .with_update_frequency(FPS)
-        .with_input_system(input)
+    // TODO: move GGRS plugin setup out of mains
+    app.add_plugins(GgrsPlugin::<GGRSConfig>::default())
+        .set_rollback_schedule_fps(FPS)
+        .add_systems(ReadInputs, input)
         .register_rollback_component::<Checksum>()
         .register_rollback_component::<Edible>()
         .register_rollback_component::<EdibleTarget>()
@@ -37,6 +38,7 @@ fn main() {
         .register_rollback_component::<HasTarget>()
         .register_rollback_component::<Player>()
         .register_rollback_component::<PlayerHealth>()
+        .register_rollback_component::<PlayerHealthBar>()
         .register_rollback_component::<PlayerSpeed>()
         .register_rollback_component::<PlayerSpeedBoost>()
         .register_rollback_component::<PlayerControls>()
@@ -44,8 +46,7 @@ fn main() {
         .register_rollback_component::<PlayerPoopTimer>()
         .register_rollback_component::<RoundComponent>()
         .register_rollback_component::<Transform>()
-        .register_rollback_resource::<EdibleSpawnTimer>()
-        .build(&mut app);
+        .register_rollback_resource::<EdibleSpawnTimer>();
 
     app.insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::rgb(0.0, 0.3, 0.0)))
@@ -68,8 +69,8 @@ fn main() {
                     level: bevy::log::Level::WARN,
                 }),
         )
-        .add_plugin(GamePlugin)
-        .add_system(set_window_icon.on_startup())
+        .add_plugins(GamePlugin)
+        .add_systems(Startup, set_window_icon)
         .run();
 }
 

@@ -5,7 +5,6 @@ use crate::{AppState, GameState, FPS};
 use bevy::core::FrameCount;
 use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
-use bevy_ggrs::Rollback;
 use bevy_kira_audio::prelude::*;
 use bevy_kira_audio::{Audio, AudioPlugin};
 
@@ -16,13 +15,13 @@ pub struct InternalAudioPlugin;
 // This plugin is responsible to control the game audio
 impl Plugin for InternalAudioPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(AudioPlugin)
+        app.add_plugins(AudioPlugin)
             .init_resource::<PlaybackStates>()
-            .add_system(init_audio.in_schedule(OnExit(AppState::Loading)))
-            .add_system(sync_rollback_sounds)
-            .add_system(remove_finished_sounds)
-            .add_system(update_looped_sounds)
-            .add_system(stop_all_sounds.in_schedule(OnEnter(GameState::Paused)));
+            .add_systems(OnExit(AppState::Loading), init_audio)
+            .add_systems(Update, sync_rollback_sounds)
+            .add_systems(Update, remove_finished_sounds)
+            .add_systems(Update, update_looped_sounds)
+            .add_systems(OnEnter(GameState::Paused), stop_all_sounds);
     }
 }
 
@@ -49,8 +48,6 @@ impl RollbackSound {
 #[derive(Bundle)]
 pub struct RollbackSoundBundle {
     pub sound: RollbackSound,
-    /// an id to make sure that the entity will be removed in case of rollbacks
-    pub rollback: Rollback,
 }
 
 fn init_audio(audio: Res<Audio>) {
@@ -115,7 +112,7 @@ fn sync_rollback_sounds(
     // stop interrupted sound effects
     for (_, instance_handle) in current_state
         .playing
-        .drain_filter(|key, _| !live.contains(key))
+        .extract_if(|key, _| !live.contains(key))
     {
         if let Some(instance) = audio_instances.get_mut(&instance_handle) {
             // todo: add config to use linear tweening, stop or keep playing as appropriate
