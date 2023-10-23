@@ -10,6 +10,7 @@ use crate::{
     player::{
         checksum::Checksum,
         components::{Edible, EdibleSpawnTimer, Player, PlayerHealth},
+        resources::HealthBarsAdded,
     },
     AppState, GameState,
 };
@@ -30,7 +31,8 @@ impl Plugin for DebugPlugin {
                 .register_type::<Edible>()
                 .register_type::<EdibleSpawnTimer>()
                 .register_type::<Player>()
-                .register_type::<PlayerHealth>();
+                .register_type::<PlayerHealth>()
+                .register_type::<HealthBarsAdded>();
         }
     }
 }

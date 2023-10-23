@@ -11,7 +11,7 @@ use turtle_time::npc::components::{EdibleTarget, Goose, HasTarget};
 use turtle_time::player::checksum::Checksum;
 use turtle_time::player::components::{
     Edible, EdibleSpawnTimer, Expired, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Player, PlayerHealth, PlayerPoop, PlayerPoopTimer, PlayerSpeed,
+    FireballTimer, Player, PlayerHealth, PlayerHealthBar, PlayerPoop, PlayerPoopTimer, PlayerSpeed,
     PlayerSpeedBoost, RoundComponent,
 };
 use turtle_time::player::input::{input, GGRSConfig, PlayerControls};
@@ -37,6 +37,7 @@ fn main() {
         .register_rollback_component::<HasTarget>()
         .register_rollback_component::<Player>()
         .register_rollback_component::<PlayerHealth>()
+        .register_rollback_component::<PlayerHealthBar>()
         .register_rollback_component::<PlayerSpeed>()
         .register_rollback_component::<PlayerSpeedBoost>()
         .register_rollback_component::<PlayerControls>()

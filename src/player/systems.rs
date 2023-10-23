@@ -1044,10 +1044,13 @@ pub fn add_player_health_bars(
                         transform: Transform::from_xyz(0., 0., 0.2),
                         ..default()
                     })
-                    .insert(PlayerHealthBar { health_entity });
-            });
+                    .insert(PlayerHealthBar { health_entity })
+                    .add_rollback();
+            })
+            .add_rollback();
         });
     }
+    trace!("insert HealthBarsAdded");
     commands.insert_resource(HealthBarsAdded)
 }
 
@@ -1058,11 +1061,12 @@ pub fn update_health_bars(
     let mut bars = health_bars.iter_mut().collect::<Vec<_>>();
     bars.sort_by_key(|e| e.0);
 
-    for (_, health_bar, mut transform) in bars {
+    for (e, health_bar, mut transform) in bars {
+        trace!("updating health bar for {:?} -> {:?}", e, transform);
         let player_health = health_entities.get(health_bar.health_entity).unwrap();
         let health_percent = player_health.decimal();
-        let h = PLAYER_HEALTH_MAX as f32 * 0.5;
-        let x_offset = h - h * health_percent;
+        let half = PLAYER_HEALTH_MID as f32;
+        let x_offset = half - half * health_percent;
 
         transform.scale = vec3(health_percent as f32, 1.0, 1.0);
         transform.translation = vec3(-x_offset, 0., 0.2)

@@ -175,6 +175,14 @@ pub struct PlayerHealthBar {
     pub health_entity: Entity,
 }
 
+impl Default for PlayerHealthBar {
+    fn default() -> Self {
+        PlayerHealthBar {
+            health_entity: Entity::PLACEHOLDER,
+        }
+    }
+}
+
 #[derive(Component)]
 pub struct PlayerHealthText;
 

@@ -27,5 +27,6 @@ impl AgreedRandom {
 #[derive(Resource)]
 pub struct PlayersReady;
 
-#[derive(Resource)]
+#[derive(Debug, Default, Reflect, Resource)]
+#[reflect(Resource)]
 pub struct HealthBarsAdded;
