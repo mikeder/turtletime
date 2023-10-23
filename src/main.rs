@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
-use bevy_ggrs::GgrsPlugin;
+use bevy_ggrs::{GgrsApp, GgrsPlugin, ReadInputs};
 use std::io::Cursor;
 use turtle_time::npc::components::{EdibleTarget, Goose, HasTarget};
 use turtle_time::player::checksum::Checksum;
@@ -21,9 +21,10 @@ use winit::window::Icon;
 fn main() {
     let mut app = App::new();
 
-    GgrsPlugin::<GGRSConfig>::new()
-        .with_update_frequency(FPS)
-        .with_input_system(input)
+    // TODO: move GGRS plugin setup out of mains
+    app.add_plugins(GgrsPlugin::<GGRSConfig>::default())
+        .set_rollback_schedule_fps(FPS)
+        .add_systems(ReadInputs, input)
         .register_rollback_component::<Checksum>()
         .register_rollback_component::<Edible>()
         .register_rollback_component::<EdibleTarget>()
@@ -45,8 +46,7 @@ fn main() {
         .register_rollback_component::<PlayerPoopTimer>()
         .register_rollback_component::<RoundComponent>()
         .register_rollback_component::<Transform>()
-        .register_rollback_resource::<EdibleSpawnTimer>()
-        .build(&mut app);
+        .register_rollback_resource::<EdibleSpawnTimer>();
 
     app.insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::rgb(0.0, 0.3, 0.0)))

@@ -26,6 +26,7 @@ use bevy::diagnostic::LogDiagnosticsPlugin;
 pub const ASPECT_RATIO: f32 = 16.0 / 9.0;
 pub const MAP_HEIGHT: f32 = 768.0;
 pub const TILE_SIZE: f32 = 32.0;
+pub const HEALTH_BAR_Y_OFFSET: f32 = TILE_SIZE + 10.;
 pub const FPS: usize = 60;
 pub const FIXED_TICK_MS: u64 = 1000 / FPS as u64; // use fixed duration tick delta to keep in sync with GGRSSchedule
 

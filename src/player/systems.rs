@@ -25,7 +25,7 @@ use crate::menu::online::PlayerCount;
 use crate::menu::win::MatchData;
 use crate::player::components::Expired;
 use crate::player::resources::PlayersReady;
-use crate::{AppState, FIXED_TICK_MS, FPS};
+use crate::{AppState, FIXED_TICK_MS, FPS, HEALTH_BAR_Y_OFFSET};
 use crate::{GameState, TILE_SIZE};
 use bevy::core::FrameCount;
 use bevy::math::vec3;
@@ -1029,25 +1029,21 @@ pub fn add_player_health_bars(
                     custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 4.)),
                     ..default()
                 },
-                transform: Transform::from_xyz(0., TILE_SIZE + 10.0, 0.),
+                transform: Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.),
+                ..default()
+            });
+            cb.spawn(SpriteBundle {
+                // red overlay
+                sprite: Sprite {
+                    color: Color::RED,
+                    custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 8.)),
+                    ..default()
+                },
+                transform: Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.2),
                 ..default()
             })
-            .with_children(|parent| {
-                parent
-                    .spawn(SpriteBundle {
-                        // red overlay
-                        sprite: Sprite {
-                            color: Color::RED,
-                            custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 8.)),
-                            ..default()
-                        },
-                        transform: Transform::from_xyz(0., 0., 0.2),
-                        ..default()
-                    })
-                    .insert(PlayerHealthBar { health_entity })
-                    .add_rollback();
-            })
-            .add_rollback();
+            // insert component used to track player health in update system
+            .insert(PlayerHealthBar { health_entity });
         });
     }
     trace!("insert HealthBarsAdded");
@@ -1069,6 +1065,6 @@ pub fn update_health_bars(
         let x_offset = half - half * health_percent;
 
         transform.scale = vec3(health_percent as f32, 1.0, 1.0);
-        transform.translation = vec3(-x_offset, 0., 0.2)
+        transform.translation = vec3(-x_offset, HEALTH_BAR_Y_OFFSET, 0.2)
     }
 }
