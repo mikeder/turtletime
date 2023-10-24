@@ -1,6 +1,6 @@
 [package]
 name = "turtle_time"
-version = "0.10.4"
+version = "0.10.5"
 publish = false
 authors = ["Mike Eder <mikedernet@gmail.com>"]
 edition = "2021"
@@ -27,12 +27,13 @@ bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs.git", branch = "main", 
     "wasm-bindgen",
 ] }
 js-sys = { version = "0.3" }
+web-sys = { version = "0.3" }
 wasm-bindgen = { version = "0.2.84" }
 wasm-bindgen-futures = { version = "0.4.34" }
 
 # Main requirements
 [dependencies]
-bevy = { version = "0.11.3", default-features = false, features = [
+bevy = { version = "0.11", default-features = false, features = [
     "bevy_gltf",
     "bevy_winit",
     "bevy_render",
@@ -44,6 +45,7 @@ bevy = { version = "0.11.3", default-features = false, features = [
     "bevy_sprite",
     "png",
     "x11",
+    "webgl2",
 ] }
 bevy_kira_audio = { git = "https://github.com/NiklasEi/bevy_kira_audio.git", branch = "bevy_main" }
 bevy_asset_loader = { version = "0.17" }
