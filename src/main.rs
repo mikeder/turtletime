@@ -82,6 +82,10 @@ fn set_window_icon(
     primary_window: Query<Entity, With<PrimaryWindow>>,
 ) {
     let primary_entity = primary_window.single();
+    // some new issue was introduced with the Bevy 0.12 upgrade,
+    // this line started panicking, so we just log a warning and abort
+    // if we can't get the primary window.
+    // https://github.com/NiklasEi/bevy_game_template/issues/80
     let primary = match windows.get_window(primary_entity) {
         Some(w) => w,
         None => {
