@@ -89,6 +89,7 @@ pub fn lobby_system(
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(player_count.0)
         .with_max_prediction_window(MAX_PREDICTION)
+        .expect("Invalid MAX_PREDICTION")
         .with_desync_detection_mode(ggrs::DesyncDetection::On { interval: 10 })
         .with_fps(FPS)
         .expect("Invalid FPS")

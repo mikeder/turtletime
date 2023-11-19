@@ -23,9 +23,7 @@ lto = "thin"
 
 # WASM requirements
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs.git", branch = "main", features = [
-    "wasm-bindgen",
-] }
+bevy_ggrs = { version = "0.14.0", features = ["wasm-bindgen"] }
 js-sys = { version = "0.3" }
 web-sys = { version = "0.3" }
 wasm-bindgen = { version = "0.2.84" }
@@ -33,7 +31,7 @@ wasm-bindgen-futures = { version = "0.4.34" }
 
 # Main requirements
 [dependencies]
-bevy = { version = "0.11", default-features = false, features = [
+bevy = { version = "0.12", default-features = false, features = [
     "bevy_gltf",
     "bevy_winit",
     "bevy_render",
@@ -47,18 +45,18 @@ bevy = { version = "0.11", default-features = false, features = [
     "x11",
     "webgl2",
 ] }
-bevy_kira_audio = { git = "https://github.com/NiklasEi/bevy_kira_audio.git", branch = "bevy_main" }
-bevy_asset_loader = { version = "0.17" }
-bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs.git", branch = "main" }
-bevy_matchbox = { version = "0.7.0", features = ["ggrs"] }
-bevy-inspector-egui = "0.19"
+bevy_kira_audio = { version = "0.18" }
+bevy_asset_loader = { version = "0.18" }
+bevy_ggrs = { version = "0.14.0" }
+bevy_matchbox = { version = "0.8.0", features = ["ggrs"] }
+bevy-inspector-egui = "0.21"
 bytemuck = { version = "1.7.3", features = ["derive"] }
-ggrs = { version = "0.9.4", features = ["sync-send"] }
+ggrs = { version = "0.10.0", features = ["sync-send"] }
 percentage = { version = "*" }
 rand = { version = "0.8.3" }
 rand_seeder = { version = "0.2.3" }
 rand_pcg = { version = "*" }
-winit = { version = "0.28", default-features = false }
+winit = { version = "0.28.7", default-features = false }
 image = { version = "0.24", default-features = false }
 
 [build-dependencies]

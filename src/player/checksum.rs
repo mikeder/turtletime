@@ -3,7 +3,7 @@ use bevy_ggrs::Rollback;
 
 use super::components::Player;
 
-#[derive(Default, Reflect, Hash, Component)]
+#[derive(Clone, Default, Reflect, Hash, Component)]
 #[reflect(Hash)]
 pub struct Checksum {
     value: u16,

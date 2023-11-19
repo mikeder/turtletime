@@ -31,7 +31,7 @@ pub const POOP_SIZE: f32 = 16.0;
 pub const POOP_DAMAGE: i32 = 2;
 pub const POOP_LIFETIME: f32 = 10.0;
 
-#[derive(Component, Default, Hash, Reflect)]
+#[derive(Clone, Component, Default, Hash, Reflect)]
 #[reflect(Component, Hash)]
 pub enum Edible {
     #[default]
@@ -41,24 +41,24 @@ pub enum Edible {
     Lettuce,
 }
 
-#[derive(Component, Default, Hash, Reflect)]
+#[derive(Clone, Component, Default, Hash, Reflect)]
 #[reflect(Component, Hash)]
 pub struct RoundComponent;
 
-#[derive(Component, Default, Hash, Reflect)]
+#[derive(Clone, Component, Default, Hash, Reflect)]
 #[reflect(Component, Hash)]
 pub struct Fireball {
     pub shot_by: usize,
 }
 
-#[derive(Component, Default, Reflect)]
+#[derive(Clone, Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct FireballMovement {
     pub dir: Vec2,
     pub speed: f32,
 }
 
-#[derive(Component, Reflect)]
+#[derive(Clone, Component, Reflect)]
 #[reflect(Component)]
 pub struct FireballTimer {
     pub lifetime: Timer,
@@ -72,7 +72,7 @@ impl Default for FireballTimer {
     }
 }
 
-#[derive(Resource, Reflect)]
+#[derive(Clone, Resource, Reflect)]
 #[reflect(Resource)]
 pub struct EdibleSpawnTimer {
     // TODO: impl hash for sync test?
@@ -91,13 +91,13 @@ impl Default for EdibleSpawnTimer {
     }
 }
 
-#[derive(Component, Default, Reflect, Hash)]
+#[derive(Clone, Component, Default, Reflect, Hash)]
 #[reflect(Component, Hash)]
 pub struct PlayerPoop {
     pub shat_by: usize,
 }
 
-#[derive(Component, Reflect)]
+#[derive(Clone, Component, Reflect)]
 #[reflect(Component)]
 pub struct PlayerPoopTimer {
     pub lifetime: Timer,
@@ -111,11 +111,11 @@ impl Default for PlayerPoopTimer {
     }
 }
 
-#[derive(Component, Default, Reflect)]
+#[derive(Clone, Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct FireballAmmo(pub i32);
 
-#[derive(Component, Default, Reflect)]
+#[derive(Clone, Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct FireballReady(pub bool);
 
@@ -168,7 +168,7 @@ impl PlayerHealth {
     }
 }
 
-#[derive(Component, Debug, Hash, Reflect)]
+#[derive(Clone, Component, Debug, Hash, Reflect)]
 #[reflect(Hash)]
 
 pub struct PlayerHealthBar {
@@ -201,6 +201,6 @@ impl Default for Player {
     }
 }
 
-#[derive(Component, Default, Hash, Reflect)]
+#[derive(Clone, Component, Default, Hash, Reflect)]
 #[reflect(Component, Hash)]
 pub struct Expired;

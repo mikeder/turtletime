@@ -11,7 +11,7 @@ impl ggrs::Config for GGRSConfig {
     type Address = PeerId;
 }
 
-#[derive(Default, Reflect, Component)]
+#[derive(Clone, Default, Reflect, Component)]
 
 pub struct PlayerControls {
     pub dir: Vec2,

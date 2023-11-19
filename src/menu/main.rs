@@ -280,6 +280,7 @@ fn create_synctest_session(commands: &mut Commands, num_players: usize) {
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(num_players)
         .with_max_prediction_window(MAX_PREDICTION)
+        .expect("Invalid MAX_PREDICTION")
         .with_fps(FPS)
         .expect("Invalid FPS")
         .with_input_delay(INPUT_DELAY)

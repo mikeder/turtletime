@@ -25,28 +25,28 @@ fn main() {
     app.add_plugins(GgrsPlugin::<GGRSConfig>::default())
         .set_rollback_schedule_fps(FPS)
         .add_systems(ReadInputs, input)
-        .register_rollback_component::<Checksum>()
-        .register_rollback_component::<Edible>()
-        .register_rollback_component::<EdibleTarget>()
-        .register_rollback_component::<Expired>()
-        .register_rollback_component::<Fireball>()
-        .register_rollback_component::<FireballAmmo>()
-        .register_rollback_component::<FireballReady>()
-        .register_rollback_component::<FireballMovement>()
-        .register_rollback_component::<FireballTimer>()
-        .register_rollback_component::<Goose>()
-        .register_rollback_component::<HasTarget>()
-        .register_rollback_component::<Player>()
-        .register_rollback_component::<PlayerHealth>()
-        .register_rollback_component::<PlayerHealthBar>()
-        .register_rollback_component::<PlayerSpeed>()
-        .register_rollback_component::<PlayerSpeedBoost>()
-        .register_rollback_component::<PlayerControls>()
-        .register_rollback_component::<PlayerPoop>()
-        .register_rollback_component::<PlayerPoopTimer>()
-        .register_rollback_component::<RoundComponent>()
-        .register_rollback_component::<Transform>()
-        .register_rollback_resource::<EdibleSpawnTimer>();
+        .rollback_component_with_clone::<Checksum>()
+        .rollback_component_with_clone::<Edible>()
+        .rollback_component_with_clone::<EdibleTarget>()
+        .rollback_component_with_clone::<Expired>()
+        .rollback_component_with_clone::<Fireball>()
+        .rollback_component_with_clone::<FireballAmmo>()
+        .rollback_component_with_clone::<FireballReady>()
+        .rollback_component_with_clone::<FireballMovement>()
+        .rollback_component_with_clone::<FireballTimer>()
+        .rollback_component_with_clone::<Goose>()
+        .rollback_component_with_clone::<HasTarget>()
+        .rollback_component_with_clone::<Player>()
+        .rollback_component_with_clone::<PlayerHealth>()
+        .rollback_component_with_clone::<PlayerHealthBar>()
+        .rollback_component_with_clone::<PlayerSpeed>()
+        .rollback_component_with_clone::<PlayerSpeedBoost>()
+        .rollback_component_with_clone::<PlayerControls>()
+        .rollback_component_with_clone::<PlayerPoop>()
+        .rollback_component_with_clone::<PlayerPoopTimer>()
+        .rollback_component_with_clone::<RoundComponent>()
+        .rollback_component_with_clone::<Transform>()
+        .rollback_resource_with_clone::<EdibleSpawnTimer>();
 
     app.insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::rgb(0.0, 0.3, 0.0)))
@@ -58,6 +58,8 @@ fn main() {
                         fit_canvas_to_parent: true,
                         title: "Turtle Time".to_string(),
                         resolution: (MAP_HEIGHT * ASPECT_RATIO, MAP_HEIGHT).into(),
+                        // Tells wasm not to override default event handling, like F5 and Ctrl+R
+                        prevent_default_event_handling: false,
                         ..default()
                     }),
                     ..default()
@@ -80,7 +82,17 @@ fn set_window_icon(
     primary_window: Query<Entity, With<PrimaryWindow>>,
 ) {
     let primary_entity = primary_window.single();
-    let primary = windows.get_window(primary_entity).unwrap();
+    // some new issue was introduced with the Bevy 0.12 upgrade,
+    // this line started panicking, so we just log a warning and abort
+    // if we can't get the primary window.
+    // https://github.com/NiklasEi/bevy_game_template/issues/80
+    let primary = match windows.get_window(primary_entity) {
+        Some(w) => w,
+        None => {
+            warn!("window not found, unable to set icon");
+            return;
+        }
+    };
     let icon_buf = Cursor::new(include_bytes!(
         "../build/macos/AppIcon.iconset/icon_256x256.png"
     ));
