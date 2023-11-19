@@ -23,9 +23,6 @@ lto = "thin"
 
 # WASM requirements
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-# bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs.git", branch = "main", features = [
-#     "wasm-bindgen",
-# ] }
 bevy_ggrs = { version = "0.14.0", features = ["wasm-bindgen"] }
 js-sys = { version = "0.3" }
 web-sys = { version = "0.3" }
@@ -48,16 +45,13 @@ bevy = { version = "0.12", default-features = false, features = [
     "x11",
     "webgl2",
 ] }
-bevy_kira_audio = { git = "https://github.com/NiklasEi/bevy_kira_audio.git", branch = "bevy_main" }
-# bevy_kira_audio = { version = "0.15.0" }
+bevy_kira_audio = { version = "0.18" }
 bevy_asset_loader = { version = "0.18" }
-# bevy_ggrs = { git = "https://github.com/gschup/bevy_ggrs.git", branch = "main" }
 bevy_ggrs = { version = "0.14.0" }
 bevy_matchbox = { version = "0.8.0", features = ["ggrs"] }
 bevy-inspector-egui = "0.21"
 bytemuck = { version = "1.7.3", features = ["derive"] }
 ggrs = { version = "0.10.0", features = ["sync-send"] }
-# ggrs = { git = "https://github.com/gschup/ggrs", features = ["sync-send"] }
 percentage = { version = "*" }
 rand = { version = "0.8.3" }
 rand_seeder = { version = "0.2.3" }
