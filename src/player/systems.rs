@@ -7,8 +7,8 @@ use super::components::{
     PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText,
     RoundComponent, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
     LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
-    PLAYER_SPEED_BOOST, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE, POOP_SIZE,
-    STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
+    PLAYER_SPEED_BOOST, PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE,
+    POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -548,7 +548,7 @@ pub fn tick_edible_timer(mut edible_spawn_timer: ResMut<EdibleSpawnTimer>) {
 
 pub fn spawn_strawberry_over_time(
     mut commands: Commands,
-    mut agreed_seed: ResMut<AgreedRandom>,
+    mut agreed_seed: ResMut<AgreedRandom>, // TODO: why does this need mut?
     asset_server: Res<TextureAssets>,
     timer: Res<EdibleSpawnTimer>,
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
@@ -574,6 +574,70 @@ pub fn spawn_strawberry_over_time(
     }
 }
 
+pub fn spawn_strawberry_on_player_spawn_points(
+    mut commands: Commands,
+    asset_server: Res<TextureAssets>,
+    player_spawns: Query<&mut PlayerSpawn>,
+    timer: Res<EdibleSpawnTimer>,
+    player_query: Query<(Entity, &Transform), With<Player>>,
+    edible_query: Query<(Entity, &Edible, &Transform), (With<Edible>, Without<Expired>)>,
+) {
+    if !timer.strawberry_timer.finished() {
+        return;
+    }
+
+    // find all strawberries on the map and sort them into a vec
+    let mut strawberries = edible_query
+        .iter()
+        .filter(|x| match x.1 {
+            Edible::Strawberry => true,
+            _ => false,
+        })
+        .collect::<Vec<_>>();
+    strawberries.sort_by_key(|e| e.0);
+
+    // collect and sort all player locations
+    let mut players = player_query.iter().collect::<Vec<_>>();
+    players.sort_by_key(|e| e.0);
+
+    // select a player spawn point, check if there is already a strawberry or player there
+    // if not, spawn a strawberry
+    for ps in player_spawns.iter() {
+        let mut free_space = true;
+        let spawn_pos = ps.pos;
+        for s in strawberries.iter() {
+            if s.2.translation.distance(spawn_pos) < TILE_SIZE {
+                free_space = false;
+                break;
+            }
+        }
+        if !free_space {
+            continue;
+        }
+        for p in players.iter() {
+            if p.1.translation.distance(spawn_pos) < TILE_SIZE {
+                free_space = false;
+                break;
+            }
+        }
+        if free_space {
+            // spawn a strawberry
+            commands
+                .spawn((
+                    Name::new("Strawberry"),
+                    Edible::Strawberry,
+                    RoundComponent,
+                    SpriteBundle {
+                        transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 1.0),
+                        texture: asset_server.texture_strawberry.clone(),
+                        ..Default::default()
+                    },
+                ))
+                .add_rollback();
+        }
+    }
+}
+
 // TODO: add sound
 pub fn player_ate_strawberry_system(
     mut commands: Commands,
@@ -596,7 +660,7 @@ pub fn player_ate_strawberry_system(
             let distance = pt.translation.distance(st.translation);
 
             if distance < TILE_SIZE / 2.0 + STRAWBERRY_SIZE / 2.0 {
-                p.0 += STRAWBERRY_AMMO_COUNT;
+                p.0 = (p.0 + STRAWBERRY_AMMO_COUNT).clamp(0, PLAYER_SPEED_BOOST_MAX);
                 commands.entity(*s).insert(Expired);
 
                 // spawn desired audio clip

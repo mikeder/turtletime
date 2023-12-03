@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_ggrs::{Rollback, Session};
+use bevy_ggrs::{GgrsTime, Rollback, Session};
 use bevy_matchbox::{prelude::SingleChannel, MatchboxSocket};
 
 use crate::{
@@ -86,6 +86,9 @@ pub fn cleanup_session(mut commands: Commands, query: Query<Entity, With<Rollbac
 
     // finally remove old session
     commands.remove_resource::<Session<GGRSConfig>>();
+
+    // https://github.com/gschup/bevy_ggrs/issues/93
+    commands.insert_resource(Time::new_with(GgrsTime::default()));
 
     // remove edible spawn timer, we will spawn a new one each round
     commands.remove_resource::<EdibleSpawnTimer>();

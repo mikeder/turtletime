@@ -73,6 +73,7 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 GgrsSchedule,
                 (
+                    spawn_strawberry_on_player_spawn_points,
                     spawn_strawberry_over_time,
                     spawn_chili_pepper_over_time,
                     spawn_lettuce_over_time,

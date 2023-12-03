@@ -25,6 +25,7 @@ pub const PLAYER_HEALTH_LOW: i32 = PLAYER_HEALTH_MAX / 4;
 
 pub const PLAYER_SPEED_START: i32 = 100;
 pub const PLAYER_SPEED_BOOST: i32 = 25;
+pub const PLAYER_SPEED_BOOST_MAX: i32 = 25;
 pub const PLAYER_SPEED_MAX: i32 = 800;
 
 pub const POOP_SIZE: f32 = 16.0;
