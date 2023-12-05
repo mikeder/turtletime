@@ -1,5 +1,6 @@
 // disable console on windows for release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use bevy::asset::AssetMetaCheck;
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -50,11 +51,13 @@ fn main() {
 
     app.insert_resource(Msaa::Off)
         .insert_resource(ClearColor(Color::rgb(0.0, 0.3, 0.0)))
+        // Tell bevy skip asset meta file checks
+        .insert_resource(AssetMetaCheck::Never)
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        canvas: Some("#bevy".to_owned()),
+                        canvas: Some("#bevy".to_owned()), // use for trunk, remove for wasm-server-runner
                         fit_canvas_to_parent: true,
                         title: "Turtle Time".to_string(),
                         resolution: (MAP_HEIGHT * ASPECT_RATIO, MAP_HEIGHT).into(),
