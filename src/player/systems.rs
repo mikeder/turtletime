@@ -8,7 +8,7 @@ use super::components::{
     RoundComponent, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
     LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
     PLAYER_SPEED_BOOST, PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE,
-    POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
+    POOP_ENTITIES_MAX, POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -438,11 +438,11 @@ pub fn player_poops(
     sounds: Res<AudioAssets>,
     textures: Res<TextureAssets>,
     player_query: Query<(&PlayerControls, &Transform, &PlayerSpeedBoost, &Player)>,
+    poop_query: Query<&PlayerPoop>,
 ) {
+    let poop_count = poop_query.iter().len();
     for (controls, transform, boost, player) in player_query.iter() {
-        if controls.sprinting && boost.0 > 0 {
-            // player poops
-            // position fireball slightly away from players position
+        if controls.sprinting && boost.0 > 0 && poop_count < POOP_ENTITIES_MAX {
             let player_pos = transform.translation;
             let pos = player_pos
                 + (Vec3::new(controls.dir.x, controls.dir.y, 0.)) / (TILE_SIZE * 1.5)

@@ -29,8 +29,9 @@ pub const PLAYER_SPEED_BOOST_MAX: i32 = 25;
 pub const PLAYER_SPEED_MAX: i32 = 800;
 
 pub const POOP_SIZE: f32 = 16.0;
-pub const POOP_DAMAGE: i32 = 2;
-pub const POOP_LIFETIME: f32 = 10.0;
+pub const POOP_DAMAGE: i32 = 5;
+pub const POOP_LIFETIME: f32 = 15.0;
+pub const POOP_ENTITIES_MAX: usize = 20;
 
 #[derive(Clone, Component, Default, Hash, Reflect)]
 #[reflect(Component, Hash)]
