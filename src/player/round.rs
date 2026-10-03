@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_ggrs::{GgrsTime, Rollback, Session};
-use bevy_matchbox::{prelude::SingleChannel, MatchboxSocket};
+use bevy_matchbox::MatchboxSocket;
 
 use crate::{
     menu::connect::LocalHandle,
@@ -19,13 +19,13 @@ use super::{
 pub fn setup_round(mut commands: Commands) {
     trace!("setup_round");
 
-    commands.spawn((Camera2dBundle::default(), RoundComponent));
+    commands.spawn((Camera2d, Msaa::Off, RoundComponent));
     commands.insert_resource(EdibleSpawnTimer::default());
 }
 
 pub fn disconnect_remote_players(
     mut session: ResMut<Session<GGRSConfig>>,
-    mut socket: ResMut<MatchboxSocket<SingleChannel>>,
+    mut socket: ResMut<MatchboxSocket>,
 ) {
     trace!("disconnecting remote players...");
     match session.as_mut() {
@@ -68,7 +68,7 @@ pub fn cleanup_round(
 
     for e in targets {
         debug!("Despawn entity: {:?}", e);
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }
 
@@ -88,7 +88,7 @@ pub fn cleanup_session(mut commands: Commands, query: Query<Entity, With<Rollbac
     commands.remove_resource::<Session<GGRSConfig>>();
 
     // https://github.com/gschup/bevy_ggrs/issues/93
-    commands.insert_resource(Time::new_with(GgrsTime::default()));
+    commands.insert_resource(Time::new_with(GgrsTime));
 
     // remove edible spawn timer, we will spawn a new one each round
     commands.remove_resource::<EdibleSpawnTimer>();
@@ -99,7 +99,7 @@ pub fn cleanup_session(mut commands: Commands, query: Query<Entity, With<Rollbac
 
     for e in targets {
         debug!("Despawn entity: {:?}", e);
-        commands.entity(e).despawn_recursive()
+        commands.entity(e).despawn()
     }
 }
 
@@ -111,7 +111,7 @@ pub fn remove_expired(mut commands: Commands, expired_query: Query<Entity, With<
     debug!("expiring entities: {:?}", expired.len());
 
     for e in expired {
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
         debug!("expired: {:?}", e);
     }
 }

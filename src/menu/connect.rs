@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use bevy_ggrs::Session;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::InspectorOptions;
-use bevy_matchbox::prelude::{PeerState, SingleChannel};
+use bevy_matchbox::prelude::PeerState;
 use bevy_matchbox::MatchboxSocket;
 use ggrs::{PlayerType, SessionBuilder};
 
@@ -38,7 +38,7 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
     info!("connecting to matchbox server: {:?}", room_url);
 
     // remove old socket that may exist from previous round
-    commands.remove_resource::<MatchboxSocket<SingleChannel>>();
+    commands.remove_resource::<MatchboxSocket>();
     // insert new socket resource for next session
     commands.insert_resource(MatchboxSocket::new_reliable(room_url));
     // commands.remove_resource::<ConnectData>();
@@ -46,7 +46,7 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
 
 pub fn lobby_system(
     mut commands: Commands,
-    mut socket: ResMut<MatchboxSocket<SingleChannel>>,
+    mut socket: ResMut<MatchboxSocket>,
     mut app_state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<NextState<GameState>>,
     player_count: Res<PlayerCount>,
@@ -63,7 +63,9 @@ pub fn lobby_system(
 
     let connected_peers = socket.connected_peers().count();
     let remaining = player_count.0 - (connected_peers + 1);
-    query.single_mut().sections[0].value = format!("Waiting for {remaining} more player(s)",);
+    if let Ok(mut text) = query.single_mut() {
+        text.0 = format!("Waiting for {remaining} more player(s)",);
+    }
     if remaining > 0 {
         return;
     }
@@ -89,7 +91,6 @@ pub fn lobby_system(
     let mut sess_build = SessionBuilder::<GGRSConfig>::new()
         .with_num_players(player_count.0)
         .with_max_prediction_window(MAX_PREDICTION)
-        .expect("Invalid MAX_PREDICTION")
         .with_desync_detection_mode(ggrs::DesyncDetection::On { interval: 10 })
         .with_fps(FPS)
         .expect("Invalid FPS")
@@ -121,14 +122,12 @@ pub fn lobby_system(
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     // ui camera
-    commands
-        .spawn(Camera2dBundle::default())
-        .insert(MenuConnectUI);
+    commands.spawn((Camera2d, Msaa::Off)).insert(MenuConnectUI);
 
     // root node
     commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(0.),
                 right: Val::Px(0.),
@@ -141,34 +140,32 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            background_color: BackgroundColor(Color::NONE),
-            ..Default::default()
-        })
+            BackgroundColor(Color::NONE),
+        ))
         .with_children(|parent| {
             // lobby id display
             parent
-                .spawn(TextBundle {
-                    style: Style {
+                .spawn((
+                    Node {
                         align_self: AlignSelf::Center,
                         justify_content: JustifyContent::Center,
                         ..Default::default()
                     },
-                    text: Text::from_section(
-                        "Searching a match...",
-                        TextStyle {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 32.,
-                            color: BUTTON_TEXT,
-                        },
-                    ),
-                    ..Default::default()
-                })
+                    Text::new("Searching a match..."),
+                    TextFont {
+                        font: font_assets.fira_sans.clone(),
+                        font_size: 32.,
+                        ..default()
+                    },
+                    TextColor(BUTTON_TEXT),
+                ))
                 .insert(LobbyText);
 
             // back button
             parent
-                .spawn(ButtonBundle {
-                    style: Style {
+                .spawn((
+                    Button,
+                    Node {
                         width: Val::Px(250.),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
@@ -177,21 +174,18 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: BackgroundColor(NORMAL_BUTTON),
-                    ..Default::default()
-                })
+                    BackgroundColor(NORMAL_BUTTON),
+                ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text::from_section(
-                            "Back to Menu",
-                            TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn((
+                        Text::new("Back to Menu"),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                    ));
                 })
                 .insert(MenuConnectBtn::Back);
         })
@@ -236,6 +230,6 @@ pub fn btn_listeners(
 
 pub fn cleanup_ui(query: Query<Entity, With<MenuConnectUI>>, mut commands: Commands) {
     for e in query.iter() {
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }

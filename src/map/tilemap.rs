@@ -31,9 +31,9 @@ impl TileMapPlugin {
         children_query: Query<&Children, With<Map>>,
         mut child_visibility_query: Query<&mut Visibility, Without<Map>>,
     ) {
-        if let Ok(children) = children_query.get_single() {
+        if let Ok(children) = children_query.single() {
             for child in children.iter() {
-                if let Ok(mut child_vis) = child_visibility_query.get_mut(*child) {
+                if let Ok(mut child_vis) = child_visibility_query.get_mut(child) {
                     *child_vis = Visibility::Hidden;
                 }
             }
@@ -44,9 +44,9 @@ impl TileMapPlugin {
         children_query: Query<&Children, With<Map>>,
         mut child_visibility_query: Query<&mut Visibility, Without<Map>>,
     ) {
-        if let Ok(children) = children_query.get_single() {
+        if let Ok(children) = children_query.single() {
             for child in children.iter() {
-                if let Ok(mut child_vis) = child_visibility_query.get_mut(*child) {
+                if let Ok(mut child_vis) = child_visibility_query.get_mut(child) {
                     *child_vis = Visibility::Visible;
                 }
             }
@@ -94,15 +94,12 @@ impl TileMapPlugin {
                     _ => textures.texture_dirt.clone(),
                 };
                 let translation = Vec3::new(x as f32 * TILE_SIZE, -(y as f32) * TILE_SIZE, 0.0);
-                let sprite = SpriteBundle {
-                    sprite: Sprite {
-                        ..Default::default()
-                    },
-                    transform: Transform::from_translation(translation),
-                    texture,
-                    ..Default::default()
-                };
-                let tile = commands.spawn(sprite).id();
+                let tile = commands
+                    .spawn((
+                        Sprite::from_image(texture),
+                        Transform::from_translation(translation),
+                    ))
+                    .id();
                 if char == '|'
                     || char == '='
                     || char == '_'
@@ -128,14 +125,9 @@ impl TileMapPlugin {
         }
 
         commands
-            .spawn(SpriteSheetBundle {
-                visibility: Visibility::Hidden,
-                ..Default::default()
-            })
+            .spawn((Visibility::Hidden, Transform::default()))
             .insert(Map)
             .insert(Name::new("Map"))
-            .insert(Transform::default())
-            .insert(GlobalTransform::default())
-            .push_children(&tiles);
+            .add_children(&tiles);
     }
 }

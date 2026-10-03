@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 use bevy_matchbox::prelude::PeerId;
-use rand::rngs::StdRng;
+use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct AgreedRandom {
-    pub rng: StdRng,
+    pub rng: Pcg64,
 }
 
 impl AgreedRandom {
@@ -18,7 +18,7 @@ impl AgreedRandom {
             a.push_str(" ");
             a.trim_end().to_string()
         });
-        let rng: StdRng = Seeder::from(seed).make_rng();
+        let rng: Pcg64 = Seeder::from(seed).into_rng();
 
         AgreedRandom { rng }
     }

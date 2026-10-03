@@ -27,14 +27,14 @@ use crate::player::components::Expired;
 use crate::player::resources::PlayersReady;
 use crate::{AppState, FIXED_TICK_MS, FPS, HEALTH_BAR_Y_OFFSET};
 use crate::{GameState, TILE_SIZE};
-use bevy::core::FrameCount;
+use bevy::color::palettes::css::{GOLD, GREEN, ORANGE_RED, RED};
+use bevy::diagnostic::FrameCount;
 use bevy::math::vec3;
 use bevy::prelude::*;
-use bevy::sprite::collide_aabb::collide;
 use bevy_ggrs::Rollback;
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs};
 use ggrs::InputStatus;
-use rand::Rng;
+use rand::RngExt;
 
 pub fn create_ui(
     mut commands: Commands,
@@ -52,8 +52,8 @@ pub fn create_ui(
 
     // root node
     commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 position_type: PositionType::Absolute,
                 left: Val::Auto,
                 right: Val::Px(10.),
@@ -66,60 +66,48 @@ pub fn create_ui(
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            background_color: BackgroundColor(Color::NONE),
-            ..Default::default()
-        })
+            BackgroundColor(Color::NONE),
+        ))
         .with_children(|parent| {
-            parent.spawn(TextBundle {
-                text: Text::from_section(
-                    player_name,
-                    TextStyle {
-                        font: font_assets.fira_sans.clone(),
-                        font_size: 50.0,
-                        color: Color::GOLD,
-                    },
-                ),
-                ..Default::default()
-            });
-            parent
-                .spawn(TextBundle {
-                    text: Text::from_section(
-                        "",
-                        TextStyle {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            color: Color::GOLD,
-                        },
-                    ),
-                    ..Default::default()
-                })
-                .insert(PlayerHealthText);
-            parent
-                .spawn(TextBundle {
-                    text: Text::from_section(
-                        "",
-                        TextStyle {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            color: Color::GOLD,
-                        },
-                    ),
-                    ..Default::default()
-                })
-                .insert(PlayerFireballText);
-            parent
-                .spawn(TextBundle {
-                    text: Text::from_section(
-                        "",
-                        TextStyle {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            color: Color::GOLD,
-                        },
-                    ),
-                    ..Default::default()
-                })
-                .insert(PlayerSpeedBoostText);
+            parent.spawn((
+                Text::new(player_name),
+                TextFont {
+                    font: font_assets.fira_sans.clone(),
+                    font_size: 50.0,
+                    ..default()
+                },
+                TextColor(GOLD.into()),
+            ));
+            parent.spawn((
+                Text::default(),
+                TextFont {
+                    font: font_assets.fira_sans.clone(),
+                    font_size: 40.0,
+                    ..default()
+                },
+                TextColor(GOLD.into()),
+                PlayerHealthText,
+            ));
+            parent.spawn((
+                Text::default(),
+                TextFont {
+                    font: font_assets.fira_sans.clone(),
+                    font_size: 40.0,
+                    ..default()
+                },
+                TextColor(GOLD.into()),
+                PlayerFireballText,
+            ));
+            parent.spawn((
+                Text::default(),
+                TextFont {
+                    font: font_assets.fira_sans.clone(),
+                    font_size: 40.0,
+                    ..default()
+                },
+                TextColor(GOLD.into()),
+                PlayerSpeedBoostText,
+            ));
         })
         .insert(RoundComponent)
         .insert(Name::new("PlayerUI"));
@@ -127,7 +115,7 @@ pub fn create_ui(
 
 pub fn update_player_health_text(
     player_handle: Option<Res<LocalHandle>>,
-    mut text_query: Query<&mut Text, With<PlayerHealthText>>,
+    mut text_query: Query<(&mut Text, &mut TextColor), With<PlayerHealthText>>,
     player_query: Query<(&Player, &PlayerHealth), Without<Fireball>>,
 ) {
     let player_handle = match player_handle {
@@ -140,18 +128,18 @@ pub fn update_player_health_text(
             continue;
         }
 
-        for mut text in text_query.iter_mut() {
+        for (mut text, mut text_color) in text_query.iter_mut() {
             let val = format!("Health: {}", health.0);
-            let mut color = Color::GOLD;
+            let mut color = GOLD;
             if health.0 == PLAYER_HEALTH_MAX {
-                color = Color::GREEN
+                color = GREEN
             } else if health.0 <= PLAYER_HEALTH_MID && health.0 > PLAYER_HEALTH_LOW {
-                color = Color::ORANGE_RED
+                color = ORANGE_RED
             } else if health.0 <= PLAYER_HEALTH_LOW {
-                color = Color::RED
+                color = RED
             }
-            text.sections[0].style.color = color;
-            text.sections[0].value = val;
+            text_color.0 = color.into();
+            text.0 = val;
         }
     }
 }
@@ -173,7 +161,7 @@ pub fn update_player_fireball_text(
 
         for mut text in text_query.iter_mut() {
             let val = format!("Fireballs: {}", ammo.0);
-            text.sections[0].value = val;
+            text.0 = val;
         }
     }
 }
@@ -195,7 +183,7 @@ pub fn update_player_speed_boost_text(
 
         for mut text in text_query.iter_mut() {
             let val = format!("Boost: {}", boost.0);
-            text.sections[0].value = val;
+            text.0 = val;
         }
     }
 }
@@ -243,7 +231,13 @@ pub fn spawn_players(
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
-    let mut sprite = TextureAtlasSprite::new(characters.turtle_frames[0]);
+    let mut sprite = Sprite::from_atlas_image(
+        characters.turtle_image.clone(),
+        TextureAtlas {
+            layout: characters.turtle_layout.clone(),
+            index: characters.turtle_frames[0],
+        },
+    );
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
 
     for handle in 0..player_count.0 {
@@ -251,13 +245,9 @@ pub fn spawn_players(
         let player_id = commands
             .spawn((
                 Name::new(name),
-                SpriteSheetBundle {
-                    sprite: sprite.clone(),
-                    texture_atlas: characters.turtle_handle.clone(),
-                    transform: Transform {
-                        translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
-                        ..Default::default()
-                    },
+                sprite.clone(),
+                Transform {
+                    translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
                     ..Default::default()
                 },
                 FrameAnimation {
@@ -377,7 +367,7 @@ pub fn move_players(
     mut query: Query<
         (
             &mut Transform,
-            &mut TextureAtlasSprite,
+            &mut Sprite,
             &mut Player,
             &PlayerSpeed,
             &PlayerControls,
@@ -423,13 +413,13 @@ pub fn move_players(
 }
 
 pub fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> bool {
-    let collision = collide(
-        target_player_pos,
+    // strict AABB overlap, touching edges do not count as a collision
+    let player = Rect::from_center_size(
+        target_player_pos.truncate(),
         Vec2::splat(TILE_SIZE * 0.9), // give player small amount of leeway
-        wall_translation,
-        Vec2::splat(TILE_SIZE),
     );
-    collision.is_some()
+    let wall = Rect::from_center_size(wall_translation.truncate(), Vec2::splat(TILE_SIZE));
+    !player.intersect(wall).is_empty()
 }
 
 pub fn player_poops(
@@ -456,15 +446,9 @@ pub fn player_poops(
                     },
                     PlayerPoopTimer::default(),
                     RoundComponent,
-                    SpriteBundle {
-                        sprite: Sprite {
-                            ..Default::default()
-                        },
-                        transform: Transform::from_xyz(pos.x, pos.y, 1.0)
-                            .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
-                        texture: textures.texture_poop.clone(),
-                        ..Default::default()
-                    },
+                    Sprite::from_image(textures.texture_poop.clone()),
+                    Transform::from_xyz(pos.x, pos.y, 1.0)
+                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
                 ))
                 .add_rollback()
                 .id();
@@ -475,7 +459,7 @@ pub fn player_poops(
                     sound: RollbackSound {
                         clip: sounds.sprinting.clone(),
                         start_frame: frame.0,
-                        sub_key: poop_instance.index(),
+                        sub_key: poop_instance.index_u32(),
                     },
                 })
                 .add_rollback();
@@ -528,7 +512,7 @@ pub fn despawn_old_poops(
     poops.sort_by_key(|e| e.0);
 
     for (poop, timer) in poops {
-        if timer.lifetime.finished() {
+        if timer.lifetime.is_finished() {
             commands.entity(poop).insert(Expired);
         }
     }
@@ -553,10 +537,10 @@ pub fn spawn_strawberry_over_time(
     timer: Res<EdibleSpawnTimer>,
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
 ) {
-    if timer.strawberry_timer.finished() {
+    if timer.strawberry_timer.is_finished() {
         let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
 
-        let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
+        let idx = agreed_seed.rng.random_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
         commands
@@ -564,11 +548,8 @@ pub fn spawn_strawberry_over_time(
                 Name::new("Strawberry"),
                 Edible::Strawberry,
                 RoundComponent,
-                SpriteBundle {
-                    transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
-                    texture: asset_server.texture_strawberry.clone(),
-                    ..Default::default()
-                },
+                Sprite::from_image(asset_server.texture_strawberry.clone()),
+                Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
             ))
             .add_rollback();
     }
@@ -582,7 +563,7 @@ pub fn spawn_strawberry_on_player_spawn_points(
     player_query: Query<(Entity, &Transform), With<Player>>,
     edible_query: Query<(Entity, &Edible, &Transform), (With<Edible>, Without<Expired>)>,
 ) {
-    if !timer.strawberry_timer.finished() {
+    if !timer.strawberry_timer.is_finished() {
         return;
     }
 
@@ -627,11 +608,8 @@ pub fn spawn_strawberry_on_player_spawn_points(
                     Name::new("Strawberry"),
                     Edible::Strawberry,
                     RoundComponent,
-                    SpriteBundle {
-                        transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 1.0),
-                        texture: asset_server.texture_strawberry.clone(),
-                        ..Default::default()
-                    },
+                    Sprite::from_image(asset_server.texture_strawberry.clone()),
+                    Transform::from_xyz(spawn_pos.x, spawn_pos.y, 1.0),
                 ))
                 .add_rollback();
         }
@@ -669,7 +647,7 @@ pub fn player_ate_strawberry_system(
                         sound: RollbackSound {
                             clip: sounds.pickup.clone(),
                             start_frame: frame.0,
-                            sub_key: s.index(),
+                            sub_key: s.index_u32(),
                         },
                     })
                     .add_rollback();
@@ -685,10 +663,10 @@ pub fn spawn_chili_pepper_over_time(
     timer: Res<EdibleSpawnTimer>,
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
 ) {
-    if timer.chili_pepper_timer.finished() {
+    if timer.chili_pepper_timer.is_finished() {
         let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
 
-        let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
+        let idx = agreed_seed.rng.random_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
         commands
@@ -696,15 +674,12 @@ pub fn spawn_chili_pepper_over_time(
                 Name::new("ChiliPepper"),
                 Edible::ChiliPepper,
                 RoundComponent,
-                SpriteBundle {
-                    sprite: Sprite {
-                        custom_size: Some(Vec2::splat(CHILI_PEPPER_SIZE * 1.5)),
-                        ..Default::default()
-                    },
-                    transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
-                    texture: asset_server.texture_chili_pepper.clone(),
+                Sprite {
+                    image: asset_server.texture_chili_pepper.clone(),
+                    custom_size: Some(Vec2::splat(CHILI_PEPPER_SIZE * 1.5)),
                     ..Default::default()
                 },
+                Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
             ))
             .add_rollback();
     }
@@ -741,7 +716,7 @@ pub fn player_ate_chili_pepper_system(
                         sound: RollbackSound {
                             clip: sounds.pickup.clone(),
                             start_frame: frame.0,
-                            sub_key: s.index(),
+                            sub_key: s.index_u32(),
                         },
                     })
                     .add_rollback();
@@ -757,10 +732,10 @@ pub fn spawn_lettuce_over_time(
     timer: Res<EdibleSpawnTimer>,
     spawner_query: Query<&Transform, With<EncounterSpawner>>,
 ) {
-    if timer.lettuce_timer.finished() {
+    if timer.lettuce_timer.is_finished() {
         let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
 
-        let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
+        let idx = agreed_seed.rng.random_range(0..spawn_area.len());
         let pos = spawn_area[idx];
 
         commands
@@ -768,11 +743,8 @@ pub fn spawn_lettuce_over_time(
                 Name::new("Lettuce"),
                 Edible::Lettuce,
                 RoundComponent,
-                SpriteBundle {
-                    transform: Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
-                    texture: asset_server.texture_lettuce.clone(),
-                    ..Default::default()
-                },
+                Sprite::from_image(asset_server.texture_lettuce.clone()),
+                Transform::from_xyz(pos.translation.x, pos.translation.y, 1.0),
             ))
             .add_rollback();
     }
@@ -811,7 +783,7 @@ pub fn player_ate_lettuce_system(
                         sound: RollbackSound {
                             clip: sounds.pickup.clone(),
                             start_frame: frame.0,
-                            sub_key: s.index(),
+                            sub_key: s.index_u32(),
                         },
                     })
                     .add_rollback();
@@ -898,12 +870,9 @@ pub fn shoot_fireballs(
                     },
                     FireballTimer::default(),
                     RoundComponent,
-                    SpriteBundle {
-                        transform: Transform::from_xyz(pos.x, pos.y, 1.)
-                            .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
-                        texture: images.texture_fireball.clone(),
-                        ..default()
-                    },
+                    Sprite::from_image(images.texture_fireball.clone()),
+                    Transform::from_xyz(pos.x, pos.y, 1.)
+                        .with_rotation(Quat::from_rotation_arc_2d(Vec2::X, controls.last_dir)),
                 ))
                 .add_rollback()
                 .id();
@@ -922,7 +891,7 @@ pub fn shoot_fireballs(
                     sound: RollbackSound {
                         clip: sounds.fireball_shot.clone(),
                         start_frame: frame.0,
-                        sub_key: fireball_id.index(),
+                        sub_key: fireball_id.index_u32(),
                     },
                 })
                 .add_rollback();
@@ -963,7 +932,7 @@ pub fn despawn_old_fireballs(
     fireballs.sort_by_key(|e| e.0);
 
     for (fireball, timer) in fireballs {
-        if timer.lifetime.finished() {
+        if timer.lifetime.is_finished() {
             debug!("Despawning old fireball {:?}", fireball);
             commands.entity(fireball).insert(Expired);
         }
@@ -1017,7 +986,7 @@ pub fn kill_players(
             &mut Player,
             &PlayerHealth,
             &mut FrameAnimation,
-            &mut TextureAtlasSprite,
+            &mut Sprite,
         ),
         (With<Player>, Without<Fireball>),
     >,
@@ -1086,26 +1055,24 @@ pub fn add_player_health_bars(
         trace!("Adding health bar");
 
         commands.entity(health_entity).with_children(|cb| {
-            cb.spawn(SpriteBundle {
+            cb.spawn((
                 // black background
-                sprite: Sprite {
+                Sprite {
                     color: Color::BLACK,
                     custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 4.)),
                     ..default()
                 },
-                transform: Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.),
-                ..default()
-            });
-            cb.spawn(SpriteBundle {
+                Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.),
+            ));
+            cb.spawn((
                 // red overlay
-                sprite: Sprite {
-                    color: Color::RED,
+                Sprite {
+                    color: RED.into(),
                     custom_size: Some(Vec2::new(PLAYER_HEALTH_MAX as f32, TILE_SIZE / 8.)),
                     ..default()
                 },
-                transform: Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.2),
-                ..default()
-            })
+                Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.2),
+            ))
             // insert component used to track player health in update system
             .insert(PlayerHealthBar { health_entity });
         });

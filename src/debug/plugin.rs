@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use bevy_ggrs::Session;
+use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::{
@@ -23,7 +24,7 @@ pub struct DebugPlugin;
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         if cfg!(debug_assertions) {
-            app.add_plugins(WorldInspectorPlugin::new())
+            app.add_plugins((EguiPlugin::default(), WorldInspectorPlugin::new()))
                 .register_type::<Checksum>()
                 .register_type::<ConsoleReady>()
                 .register_type::<LocalHandle>()
@@ -44,21 +45,18 @@ impl Plugin for ConsolePlugin {
         app.add_systems(OnExit(AppState::Loading), setup_ui)
             .add_systems(Update, log_ggrs_events.run_if(in_state(GameState::Playing)))
             .add_systems(Update, open_console)
+            .add_systems(Update, count_edibles.run_if(resource_exists::<EdibleCount>))
             .add_systems(
                 Update,
-                count_edibles.run_if(resource_exists::<EdibleCount>()),
+                update_console_text.run_if(resource_exists::<PeerInfo>),
             )
             .add_systems(
                 Update,
-                update_console_text.run_if(resource_exists::<PeerInfo>()),
+                reset_console_ready.run_if(resource_exists::<PeerInfo>),
             )
             .add_systems(
                 Update,
-                reset_console_ready.run_if(resource_exists::<PeerInfo>()),
-            )
-            .add_systems(
-                Update,
-                update_peer_info.run_if(resource_exists::<Session<GGRSConfig>>()),
+                update_peer_info.run_if(resource_exists::<Session<GGRSConfig>>),
             );
     }
 }

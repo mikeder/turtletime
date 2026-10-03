@@ -23,41 +23,41 @@ lto = "thin"
 
 # WASM requirements
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy_ggrs = { version = "0.14.0", features = ["wasm-bindgen"] }
+bevy_ggrs = { version = "0.20", features = ["wasm-bindgen"] }
 js-sys = { version = "0.3" }
 web-sys = { version = "0.3" }
-wasm-bindgen = { version = "0.2.89" }
-wasm-bindgen-futures = { version = "0.4.39" }
+wasm-bindgen = { version = "0.2.105" }
+wasm-bindgen-futures = { version = "0.4.55" }
 
 # Main requirements
 [dependencies]
-bevy = { version = "0.12.1", default-features = false, features = [
-    "bevy_gltf",
+bevy = { version = "0.18.1", default-features = false, features = [
+    "default_app",
+    "std",
+    "multi_threaded",
     "bevy_winit",
-    "bevy_render",
+    "2d_bevy_render",
+    "ui_api",
+    "ui_bevy_render",
+    "bevy_gltf",
     "bevy_pbr",
-    "bevy_core_pipeline",
-    "bevy_ui",
-    "bevy_text",
-    "bevy_asset",
-    "bevy_sprite",
     "png",
     "x11",
     "webgl2",
 ] }
-bevy_kira_audio = { version = "0.18" }
-bevy_asset_loader = { version = "0.18" }
-bevy_ggrs = { version = "0.14.0" }
-bevy_matchbox = { version = "0.8.0", features = ["ggrs"] }
-bevy-inspector-egui = "0.21"
-bytemuck = { version = "1.7.3", features = ["derive"] }
-ggrs = { version = "0.10.0", features = ["sync-send"] }
-percentage = { version = "*" }
-rand = { version = "0.8.3" }
-rand_seeder = { version = "0.2.3" }
-rand_pcg = { version = "*" }
-winit = { version = "0.28.7", default-features = false }
-image = { version = "0.24", default-features = false }
+bevy_kira_audio = { version = "0.25" }
+bevy_asset_loader = { version = "0.26" }
+bevy_ggrs = { version = "0.20" }
+bevy_matchbox = { version = "0.14", features = ["ggrs"] }
+bevy-inspector-egui = "0.36"
+ggrs = { version = "0.11.1", features = ["sync-send"] }
+percentage = { version = "0.1" }
+rand = { version = "0.10", default-features = false, features = ["std"] }
+rand_pcg = { version = "0.10" }
+rand_seeder = { version = "0.5" }
+serde = { version = "1", features = ["derive"] }
+winit = { version = "0.30", default-features = false }
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [build-dependencies]
-embed-resource = "1.4"
+embed-resource = "3.0"

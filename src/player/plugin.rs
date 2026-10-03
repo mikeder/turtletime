@@ -23,11 +23,11 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 Update,
-                add_player_health_bars.run_if(resource_added::<PlayersReady>()),
+                add_player_health_bars.run_if(resource_added::<PlayersReady>),
             )
             .add_systems(
                 Update,
-                update_health_bars.run_if(resource_exists::<HealthBarsAdded>()),
+                update_health_bars.run_if(resource_exists::<HealthBarsAdded>),
             )
             .add_systems(Update, camera_follow.run_if(in_state(GameState::Playing)))
             // round cleanup

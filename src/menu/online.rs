@@ -4,6 +4,8 @@ use super::plugin::{
 };
 use crate::loading::FontAssets;
 use crate::AppState;
+use bevy::input::keyboard::{Key, KeyboardInput};
+use bevy::input::ButtonState;
 use bevy::prelude::*;
 
 const MIN_PLAYERS: usize = 2;
@@ -40,14 +42,12 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     // lobby id resource
     commands.insert_resource(LobbyID("".to_owned()));
     // ui camera
-    commands
-        .spawn(Camera2dBundle::default())
-        .insert(MenuOnlineUI);
+    commands.spawn((Camera2d, Msaa::Off)).insert(MenuOnlineUI);
 
     // root node
     commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(0.),
                 right: Val::Px(0.),
@@ -60,40 +60,35 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            background_color: BackgroundColor(Color::NONE),
-            ..Default::default()
-        })
+            BackgroundColor(Color::NONE),
+        ))
         .with_children(|parent| {
             // player count buttons
             parent
-                .spawn(TextBundle {
-                    text: Text {
-                        sections: vec![
-                            TextSection {
-                                value: "Player Count: ".to_owned(),
-                                style: TextStyle {
-                                    font: font_assets.fira_sans.clone(),
-                                    font_size: 40.0,
-                                    color: BUTTON_TEXT,
-                                },
-                            },
-                            TextSection {
-                                value: "".to_owned(),
-                                style: TextStyle {
-                                    font: font_assets.fira_sans.clone(),
-                                    font_size: 40.0,
-                                    color: BUTTON_TEXT,
-                                },
-                            },
-                        ],
-                        ..Default::default()
+                .spawn((
+                    Text::new("Player Count: ".to_owned()),
+                    TextFont {
+                        font: font_assets.fira_sans.clone(),
+                        font_size: 40.0,
+                        ..default()
                     },
-                    ..Default::default()
-                })
-                .insert(PlayerCountText);
+                    TextColor(BUTTON_TEXT),
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        TextSpan::new("".to_owned()),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                        PlayerCountText,
+                    ));
+                });
             parent
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn((
+                    Node {
                         position_type: PositionType::Relative,
                         flex_direction: FlexDirection::RowReverse,
                         align_content: AlignContent::Center,
@@ -102,13 +97,13 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         justify_content: JustifyContent::Center,
                         ..Default::default()
                     },
-                    background_color: BackgroundColor(Color::NONE),
-                    ..Default::default()
-                })
+                    BackgroundColor(Color::NONE),
+                ))
                 .with_children(|parent| {
                     parent
-                        .spawn(ButtonBundle {
-                            style: Style {
+                        .spawn((
+                            Button,
+                            Node {
                                 width: Val::Px(100.0),
                                 height: Val::Px(65.0),
                                 justify_content: JustifyContent::Center,
@@ -117,27 +112,25 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                                 padding: UiRect::all(Val::Px(16.)),
                                 ..Default::default()
                             },
-                            background_color: BackgroundColor(NORMAL_BUTTON),
-                            ..Default::default()
-                        })
+                            BackgroundColor(NORMAL_BUTTON),
+                        ))
                         .with_children(|parent| {
-                            parent.spawn(TextBundle {
-                                text: Text::from_section(
-                                    "+",
-                                    TextStyle {
-                                        font: font_assets.fira_sans.clone(),
-                                        font_size: 40.0,
-                                        color: BUTTON_TEXT,
-                                    },
-                                ),
-                                ..Default::default()
-                            });
+                            parent.spawn((
+                                Text::new("+"),
+                                TextFont {
+                                    font: font_assets.fira_sans.clone(),
+                                    font_size: 40.0,
+                                    ..default()
+                                },
+                                TextColor(BUTTON_TEXT),
+                            ));
                         })
                         .insert(MenuOnlineBtn::PlayerCountUP);
 
                     parent
-                        .spawn(ButtonBundle {
-                            style: Style {
+                        .spawn((
+                            Button,
+                            Node {
                                 width: Val::Px(100.0),
                                 height: Val::Px(65.0),
                                 justify_content: JustifyContent::Center,
@@ -146,29 +139,27 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                                 padding: UiRect::all(Val::Px(16.)),
                                 ..Default::default()
                             },
-                            background_color: BackgroundColor(NORMAL_BUTTON),
-                            ..Default::default()
-                        })
+                            BackgroundColor(NORMAL_BUTTON),
+                        ))
                         .with_children(|parent| {
-                            parent.spawn(TextBundle {
-                                text: Text::from_section(
-                                    "-",
-                                    TextStyle {
-                                        font: font_assets.fira_sans.clone(),
-                                        font_size: 40.0,
-                                        color: BUTTON_TEXT,
-                                    },
-                                ),
-                                ..Default::default()
-                            });
+                            parent.spawn((
+                                Text::new("-"),
+                                TextFont {
+                                    font: font_assets.fira_sans.clone(),
+                                    font_size: 40.0,
+                                    ..default()
+                                },
+                                TextColor(BUTTON_TEXT),
+                            ));
                         })
                         .insert(MenuOnlineBtn::PlayerCountDown);
                 });
 
             // quick match button
             parent
-                .spawn(ButtonBundle {
-                    style: Style {
+                .spawn((
+                    Button,
+                    Node {
                         width: Val::Px(250.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
@@ -177,61 +168,55 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: BackgroundColor(NORMAL_BUTTON),
-                    ..Default::default()
-                })
+                    BackgroundColor(NORMAL_BUTTON),
+                ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text::from_section(
-                            "Quick Match",
-                            TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn((
+                        Text::new("Quick Match"),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                    ));
                 })
                 .insert(MenuOnlineBtn::QuickMatch);
 
             // lobby id text
             parent
-                .spawn(TextBundle {
-                    style: Style {
+                .spawn((
+                    Node {
                         align_self: AlignSelf::Center,
                         justify_content: JustifyContent::Center,
                         ..Default::default()
                     },
-                    text: Text {
-                        sections: vec![
-                            TextSection {
-                                value: "Enter a 4-digit ID!\n".to_owned(),
-                                style: TextStyle {
-                                    font: font_assets.fira_sans.clone(),
-                                    font_size: 40.0,
-                                    color: BUTTON_TEXT,
-                                },
-                            },
-                            TextSection {
-                                value: "".to_owned(),
-                                style: TextStyle {
-                                    font: font_assets.fira_sans.clone(),
-                                    font_size: 40.0,
-                                    color: BUTTON_TEXT,
-                                },
-                            },
-                        ],
-                        ..Default::default()
+                    Text::new("Enter a 4-digit ID!\n".to_owned()),
+                    TextFont {
+                        font: font_assets.fira_sans.clone(),
+                        font_size: 40.0,
+                        ..default()
                     },
-                    ..Default::default()
-                })
-                .insert(LobbyCodeText);
+                    TextColor(BUTTON_TEXT),
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        TextSpan::new("".to_owned()),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                        LobbyCodeText,
+                    ));
+                });
 
             // lobby match button
             parent
-                .spawn(ButtonBundle {
-                    style: Style {
+                .spawn((
+                    Button,
+                    Node {
                         width: Val::Px(250.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
@@ -240,29 +225,27 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: BackgroundColor(NORMAL_BUTTON),
-                    ..Default::default()
-                })
+                    BackgroundColor(NORMAL_BUTTON),
+                ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text::from_section(
-                            "Lobby Match",
-                            TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn((
+                        Text::new("Lobby Match"),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                    ));
                 })
                 .insert(MenuOnlineBtn::LobbyMatch)
                 .insert(ButtonEnabled(false));
 
             // back button
             parent
-                .spawn(ButtonBundle {
-                    style: Style {
+                .spawn((
+                    Button,
+                    Node {
                         width: Val::Px(250.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
@@ -271,21 +254,18 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: BackgroundColor(NORMAL_BUTTON),
-                    ..Default::default()
-                })
+                    BackgroundColor(NORMAL_BUTTON),
+                ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text::from_section(
-                            "Back to Menu",
-                            TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn((
+                        Text::new("Back to Menu"),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                    ));
                 })
                 .insert(MenuOnlineBtn::Back);
         })
@@ -293,17 +273,25 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
 }
 
 pub fn update_lobby_id(
-    mut char_evr: EventReader<ReceivedCharacter>,
-    keys: Res<Input<KeyCode>>,
+    mut keyboard_evr: MessageReader<KeyboardInput>,
+    keys: Res<ButtonInput<KeyCode>>,
     mut lobby_id: ResMut<LobbyID>,
 ) {
     let lid = &mut lobby_id.0;
-    for ev in char_evr.read() {
-        if lid.len() < 4 && ev.char.is_ascii_digit() {
-            lid.push(ev.char);
+    for ev in keyboard_evr.read() {
+        if ev.state != ButtonState::Pressed {
+            continue;
+        }
+        let Key::Character(chars) = &ev.logical_key else {
+            continue;
+        };
+        for c in chars.chars() {
+            if lid.len() < 4 && c.is_ascii_digit() {
+                lid.push(c);
+            }
         }
     }
-    if keys.just_pressed(KeyCode::Back) {
+    if keys.just_pressed(KeyCode::Backspace) {
         let mut chars = lid.chars();
         chars.next_back();
         *lid = chars.as_str().to_owned();
@@ -311,21 +299,21 @@ pub fn update_lobby_id(
 }
 
 pub fn update_lobby_id_display(
-    mut query: Query<&mut Text, With<LobbyCodeText>>,
+    mut query: Query<&mut TextSpan, With<LobbyCodeText>>,
     lobby_id: ResMut<LobbyID>,
 ) {
     for mut text in query.iter_mut() {
-        text.sections[1].value = lobby_id.0.clone();
+        text.0 = lobby_id.0.clone();
     }
 }
 
 pub fn update_lobby_btn(
-    text_query: Query<&Text, With<LobbyCodeText>>,
+    text_query: Query<&TextSpan, With<LobbyCodeText>>,
     mut btn_query: Query<&mut ButtonEnabled, With<MenuOnlineBtn>>,
 ) {
     let mut lobby_id_complete = false;
     for text in text_query.iter() {
-        if text.sections[1].value.len() == 4 {
+        if text.0.len() == 4 {
             lobby_id_complete = true;
             break;
         }
@@ -419,15 +407,15 @@ pub fn btn_listeners(
 
 pub fn update_player_count_display(
     player_count: Res<PlayerCount>,
-    mut query: Query<&mut Text, With<PlayerCountText>>,
+    mut query: Query<&mut TextSpan, With<PlayerCountText>>,
 ) {
     for mut text in query.iter_mut() {
-        text.sections[1].value = player_count.0.clone().to_string();
+        text.0 = player_count.0.clone().to_string();
     }
 }
 
 pub fn cleanup_ui(query: Query<Entity, With<MenuOnlineUI>>, mut commands: Commands) {
     for e in query.iter() {
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }

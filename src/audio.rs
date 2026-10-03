@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use crate::player::components::Expired;
 use crate::{AppState, GameState, FPS};
-use bevy::core::FrameCount;
+use bevy::diagnostic::FrameCount;
+use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
-use bevy::utils::{HashMap, HashSet};
 use bevy_kira_audio::prelude::*;
 use bevy_kira_audio::{Audio, AudioPlugin};
 
@@ -52,8 +52,9 @@ pub struct RollbackSoundBundle {
 
 fn init_audio(audio: Res<Audio>) {
     // todo: volume control in options
-    let volume = 0.3;
-    audio.set_volume(volume);
+    // kira takes decibels, convert from the linear amplitude we've always used
+    let volume: f32 = 0.3;
+    audio.set_volume(Decibels(20. * volume.log10()));
 }
 
 /// Actual playback states, managed by sync_rollback_sounds system below.

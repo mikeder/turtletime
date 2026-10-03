@@ -1,7 +1,7 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_ggrs::*;
 use bevy_matchbox::matchbox_socket::PeerId;
-use bytemuck::{Pod, Zeroable};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub struct GGRSConfig;
@@ -21,8 +21,7 @@ pub struct PlayerControls {
     pub sprinting: bool,
 }
 
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, Pod, Zeroable)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct PlayerInput {
     pub input: u8,
 }
@@ -35,25 +34,29 @@ pub const INPUT_FIRE: u8 = 1 << 4;
 pub const INPUT_EXIT: u8 = 1 << 5;
 pub const INPUT_SPRINT: u8 = 1 << 6;
 
-pub fn input(mut commands: Commands, keys: Res<Input<KeyCode>>, local_players: Res<LocalPlayers>) {
+pub fn input(
+    mut commands: Commands,
+    keys: Res<ButtonInput<KeyCode>>,
+    local_players: Res<LocalPlayers>,
+) {
     let mut local_inputs = HashMap::new();
 
     for handle in &local_players.0 {
         let mut input: u8 = 0;
 
-        if keys.pressed(KeyCode::W) {
+        if keys.pressed(KeyCode::KeyW) {
             input |= INPUT_UP;
         }
-        if keys.pressed(KeyCode::S) {
+        if keys.pressed(KeyCode::KeyS) {
             input |= INPUT_DOWN;
         }
-        if keys.pressed(KeyCode::A) {
+        if keys.pressed(KeyCode::KeyA) {
             input |= INPUT_LEFT
         }
-        if keys.pressed(KeyCode::D) {
+        if keys.pressed(KeyCode::KeyD) {
             input |= INPUT_RIGHT;
         }
-        if keys.any_pressed([KeyCode::Space, KeyCode::Return]) {
+        if keys.any_pressed([KeyCode::Space, KeyCode::Enter]) {
             input |= INPUT_FIRE;
         }
         if keys.any_pressed([KeyCode::Escape, KeyCode::Delete]) {

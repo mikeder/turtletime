@@ -30,12 +30,12 @@ pub fn setup_ui(
     }
 
     // ui camera
-    commands.spawn(Camera2dBundle::default()).insert(WinUI);
+    commands.spawn((Camera2d, Msaa::Off)).insert(WinUI);
 
     // root node
     commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(0.),
                 right: Val::Px(0.),
@@ -48,31 +48,29 @@ pub fn setup_ui(
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            background_color: Color::NONE.into(),
-            ..Default::default()
-        })
+            BackgroundColor(Color::NONE),
+        ))
         .with_children(|parent| {
             // match result string
-            parent.spawn(TextBundle {
-                style: Style {
+            parent.spawn((
+                Node {
                     align_self: AlignSelf::Center,
                     justify_content: JustifyContent::Center,
                     ..Default::default()
                 },
-                text: Text::from_section(
-                    match_data.result.clone(),
-                    TextStyle {
-                        font: font_assets.fira_sans.clone(),
-                        font_size: 96.,
-                        color: BUTTON_TEXT,
-                    },
-                ),
-                ..Default::default()
-            });
+                Text::new(match_data.result.clone()),
+                TextFont {
+                    font: font_assets.fira_sans.clone(),
+                    font_size: 96.,
+                    ..default()
+                },
+                TextColor(BUTTON_TEXT),
+            ));
             // rematch button
             parent
-                .spawn(ButtonBundle {
-                    style: Style {
+                .spawn((
+                    Button,
+                    Node {
                         width: Val::Px(250.),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
@@ -82,28 +80,26 @@ pub fn setup_ui(
 
                         ..Default::default()
                     },
-                    visibility: rematch_vis,
-                    background_color: NORMAL_BUTTON.into(),
-                    ..Default::default()
-                })
+                    rematch_vis,
+                    BackgroundColor(NORMAL_BUTTON),
+                ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text::from_section(
-                            "Rematch",
-                            TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn((
+                        Text::new("Rematch"),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                    ));
                 })
                 .insert(MenuWinBtn::Rematch);
             // back to menu button
             parent
-                .spawn(ButtonBundle {
-                    style: Style {
+                .spawn((
+                    Button,
+                    Node {
                         width: Val::Px(250.),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
@@ -112,21 +108,18 @@ pub fn setup_ui(
                         padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: NORMAL_BUTTON.into(),
-                    ..Default::default()
-                })
+                    BackgroundColor(NORMAL_BUTTON),
+                ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text::from_section(
-                            "Back to Menu",
-                            TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn((
+                        Text::new("Back to Menu"),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                    ));
                 })
                 .insert(MenuWinBtn::Back);
         })
@@ -176,6 +169,6 @@ pub fn btn_listeners(
 
 pub fn cleanup_ui(query: Query<Entity, With<WinUI>>, mut commands: Commands) {
     for e in query.iter() {
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }

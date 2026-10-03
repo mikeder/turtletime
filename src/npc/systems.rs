@@ -1,6 +1,6 @@
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_ggrs::AddRollbackCommandExtension;
-use rand::Rng;
+use rand::RngExt;
 
 use crate::{
     debug,
@@ -25,22 +25,24 @@ pub fn spawn_geese(
     trace!("spawn_geese");
 
     let spawn_area: Vec<&Transform> = spawner_query.iter().collect();
-    let idx = agreed_seed.rng.gen_range(0..spawn_area.len());
+    let idx = agreed_seed.rng.random_range(0..spawn_area.len());
     let pos = spawn_area[idx].translation;
 
-    let mut sprite = TextureAtlasSprite::new(characters.goose_frames[0]);
+    let mut sprite = Sprite::from_atlas_image(
+        characters.goose_image.clone(),
+        TextureAtlas {
+            layout: characters.goose_layout.clone(),
+            index: characters.goose_frames[0],
+        },
+    );
     sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
 
     commands
         .spawn((
             Name::new("Goose"),
-            SpriteSheetBundle {
-                sprite,
-                texture_atlas: characters.goose_handle.clone(),
-                transform: Transform {
-                    translation: Vec3::new(pos.x, pos.y, 1.),
-                    ..Default::default()
-                },
+            sprite,
+            Transform {
+                translation: Vec3::new(pos.x, pos.y, 1.),
                 ..Default::default()
             },
             FrameAnimation {
@@ -105,7 +107,7 @@ pub fn move_geese_toward_target(
     mut commands: Commands,
     target_query: Query<(Entity, &Transform), (With<EdibleTarget>, Without<Expired>)>,
     mut goose_query: Query<
-        (Entity, &mut Transform, &mut TextureAtlasSprite),
+        (Entity, &mut Transform, &mut Sprite),
         (With<Goose>, With<HasTarget>, Without<EdibleTarget>),
     >,
 ) {

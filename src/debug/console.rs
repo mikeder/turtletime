@@ -2,15 +2,16 @@ use super::components::{
     ConsoleReady, ConsoleText, ConsoleUI, ConsoleUpdateTimer, EdibleCount, PeerInfo,
 };
 use crate::loading::FontAssets;
+use bevy::color::palettes::css::GREEN;
 use bevy::prelude::*;
 
-const CONSOLE_KEY: KeyCode = KeyCode::Grave;
+const CONSOLE_KEY: KeyCode = KeyCode::Backquote;
 
 pub fn open_console(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut console_vis: Query<(&mut ConsoleReady, &mut Visibility), With<ConsoleUI>>,
 ) {
-    let (mut ready, mut vis) = match console_vis.get_single_mut() {
+    let (mut ready, mut vis) = match console_vis.single_mut() {
         Ok(r) => r,
         Err(e) => {
             debug!("{:?}", e);
@@ -29,10 +30,10 @@ pub fn open_console(
 }
 
 pub fn reset_console_ready(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut ready: Query<&mut ConsoleReady, With<ConsoleUI>>,
 ) {
-    let mut ready: Mut<ConsoleReady> = match ready.get_single_mut() {
+    let mut ready: Mut<ConsoleReady> = match ready.single_mut() {
         Ok(r) => r,
         Err(e) => {
             debug!("{:?}", e);
@@ -48,8 +49,8 @@ pub fn reset_console_ready(
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     // root node
     commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(10.),
                 right: Val::Auto,
@@ -62,38 +63,26 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            visibility: Visibility::Hidden,
-            background_color: BackgroundColor(Color::Rgba {
-                red: 0.,
-                green: 0.,
-                blue: 0.,
-                alpha: 0.7,
-            }),
-            ..Default::default()
-        })
+            Visibility::Hidden,
+            BackgroundColor(Color::srgba(0., 0., 0., 0.7)),
+        ))
         .with_children(|parent| {
             // lobby id display
-            parent
-                .spawn(TextBundle {
-                    style: Style {
-                        align_self: AlignSelf::Center,
-                        justify_content: JustifyContent::Center,
-                        ..Default::default()
-                    },
-                    text: Text {
-                        sections: vec![TextSection {
-                            value: "".to_owned(),
-                            style: TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 15.0,
-                                color: Color::GREEN,
-                            },
-                        }],
-                        ..Default::default()
-                    },
+            parent.spawn((
+                Node {
+                    align_self: AlignSelf::Center,
+                    justify_content: JustifyContent::Center,
                     ..Default::default()
-                })
-                .insert(ConsoleText);
+                },
+                Text::default(),
+                TextFont {
+                    font: font_assets.fira_sans.clone(),
+                    font_size: 15.0,
+                    ..default()
+                },
+                TextColor(GREEN.into()),
+                ConsoleText,
+            ));
         })
         .insert(Name::new("ConsoleUI"))
         .insert(ConsoleReady::default())
@@ -113,7 +102,7 @@ pub fn update_console_text(
     mut query: Query<&mut Text, With<ConsoleText>>,
 ) {
     for mut text in query.iter_mut() {
-        text.sections[0].value = format!(
+        text.0 = format!(
             "Edible count: {}\nPeer Info: \n{}",
             edible_count.0, peer_info.0
         );

@@ -6,8 +6,10 @@ pub struct GraphicsPlugin;
 
 #[derive(Resource)]
 pub struct CharacterSheet {
-    pub turtle_handle: Handle<TextureAtlas>,
-    pub goose_handle: Handle<TextureAtlas>,
+    pub turtle_image: Handle<Image>,
+    pub turtle_layout: Handle<TextureAtlasLayout>,
+    pub goose_image: Handle<Image>,
+    pub goose_layout: Handle<TextureAtlasLayout>,
     pub turtle_frames: [usize; 4],
     pub goose_frames: [usize; 4],
 }
@@ -32,46 +34,48 @@ impl GraphicsPlugin {
     fn load_graphics(
         assets: Res<TextureAssets>,
         mut commands: Commands,
-        mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+        mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     ) {
         // load turtle atlas sheet
-        let turtle_atlas = TextureAtlas::from_grid(
-            assets.texture_turtle_cheeks_frame_party_hat.clone(),
-            Vec2::splat(TILE_SIZE),
+        let turtle_atlas = TextureAtlasLayout::from_grid(
+            UVec2::splat(TILE_SIZE as u32),
             4,
             1,
-            Some(Vec2 { x: 2.0, y: 0. }),
-            Some(Vec2 { x: 0.0, y: 0. }),
+            Some(UVec2 { x: 2, y: 0 }),
+            Some(UVec2 { x: 0, y: 0 }),
         );
 
         // load goose atlas sheet
-        let goose_atlas = TextureAtlas::from_grid(
-            assets.texture_goose.clone(),
-            Vec2::splat(TILE_SIZE),
+        let goose_atlas = TextureAtlasLayout::from_grid(
+            UVec2::splat(TILE_SIZE as u32),
             4,
             1,
-            Some(Vec2 { x: 1.0, y: 0. }),
-            Some(Vec2 { x: 0.0, y: 0. }),
+            Some(UVec2 { x: 1, y: 0 }),
+            Some(UVec2 { x: 0, y: 0 }),
         );
 
         // add character sheet with atlas and frame instructions
         commands.insert_resource(CharacterSheet {
-            turtle_handle: texture_atlases.add(turtle_atlas),
+            turtle_image: assets.texture_turtle_cheeks_frame_party_hat.clone(),
+            turtle_layout: texture_atlases.add(turtle_atlas),
             turtle_frames: [0, 1, 2, 3],
-            goose_handle: texture_atlases.add(goose_atlas),
+            goose_image: assets.texture_goose.clone(),
+            goose_layout: texture_atlases.add(goose_atlas),
             goose_frames: [0, 1, 2, 3],
         });
     }
 
     fn frame_animation(
-        mut sprites_query: Query<(&mut TextureAtlasSprite, &mut FrameAnimation)>,
+        mut sprites_query: Query<(&mut Sprite, &mut FrameAnimation)>,
         time: Res<Time>,
     ) {
         for (mut sprite, mut animation) in sprites_query.iter_mut() {
             animation.timer.tick(time.delta());
             if animation.timer.just_finished() {
                 animation.current_frame = (animation.current_frame + 1) % animation.frames.len();
-                sprite.index = animation.frames[animation.current_frame];
+                if let Some(atlas) = sprite.texture_atlas.as_mut() {
+                    atlas.index = animation.frames[animation.current_frame];
+                }
             }
         }
     }

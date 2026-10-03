@@ -13,14 +13,12 @@ pub enum MenuOptionsBtn {
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
     // ui camera
-    commands
-        .spawn(Camera2dBundle::default())
-        .insert(MenuOptionsUI);
+    commands.spawn((Camera2d, Msaa::Off)).insert(MenuOptionsUI);
 
     // root node
     commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(0.),
                 right: Val::Px(0.),
@@ -33,55 +31,54 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            background_color: BackgroundColor(Color::NONE),
-            ..Default::default()
-        })
+            BackgroundColor(Color::NONE),
+        ))
         .with_children(|parent| {
-            parent.spawn(TextBundle {
-                text: Text {
-                    sections: vec![
-                        TextSection {
-                            value: "Controls:\n".to_owned(),
-                            style: TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
+            parent
+                .spawn((
+                    Text::new("Controls:\n".to_owned()),
+                    TextFont {
+                        font: font_assets.fira_sans.clone(),
+                        font_size: 40.0,
+                        ..default()
+                    },
+                    TextColor(BUTTON_TEXT),
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        TextSpan::new("Movement: [W A S D]\n".to_owned()),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 30.0,
+                            ..default()
                         },
-                        TextSection {
-                            value: "Movement: [W A S D]\n".to_owned(),
-                            style: TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 30.0,
-                                color: BUTTON_TEXT,
-                            },
+                        TextColor(BUTTON_TEXT),
+                    ));
+                    p.spawn((
+                        TextSpan::new("Fireball: [SPACE or RETURN]\n".to_owned()),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 30.0,
+                            ..default()
                         },
-                        TextSection {
-                            value: "Fireball: [SPACE or RETURN]\n".to_owned(),
-                            style: TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 30.0,
-                                color: BUTTON_TEXT,
-                            },
+                        TextColor(BUTTON_TEXT),
+                    ));
+                    p.spawn((
+                        TextSpan::new("Sprint: [LEFT SHIFT]\n".to_owned()),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 30.0,
+                            ..default()
                         },
-                        TextSection {
-                            value: "Sprint: [LEFT SHIFT]\n".to_owned(),
-                            style: TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 30.0,
-                                color: BUTTON_TEXT,
-                            },
-                        },
-                    ],
-                    ..Default::default()
-                },
-                ..Default::default()
-            });
+                        TextColor(BUTTON_TEXT),
+                    ));
+                });
 
             // back button
             parent
-                .spawn(ButtonBundle {
-                    style: Style {
+                .spawn((
+                    Button,
+                    Node {
                         width: Val::Px(250.0),
                         height: Val::Px(65.0),
                         justify_content: JustifyContent::Center,
@@ -90,21 +87,18 @@ pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
                         padding: UiRect::all(Val::Px(16.)),
                         ..Default::default()
                     },
-                    background_color: BackgroundColor(NORMAL_BUTTON),
-                    ..Default::default()
-                })
+                    BackgroundColor(NORMAL_BUTTON),
+                ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle {
-                        text: Text::from_section(
-                            "Back to Menu",
-                            TextStyle {
-                                font: font_assets.fira_sans.clone(),
-                                font_size: 40.0,
-                                color: BUTTON_TEXT,
-                            },
-                        ),
-                        ..Default::default()
-                    });
+                    parent.spawn((
+                        Text::new("Back to Menu"),
+                        TextFont {
+                            font: font_assets.fira_sans.clone(),
+                            font_size: 40.0,
+                            ..default()
+                        },
+                        TextColor(BUTTON_TEXT),
+                    ));
                 })
                 .insert(MenuOptionsBtn::Back);
         })
@@ -149,6 +143,6 @@ pub fn btn_visuals(
 
 pub fn cleanup_ui(query: Query<Entity, With<MenuOptionsUI>>, mut commands: Commands) {
     for e in query.iter() {
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }
