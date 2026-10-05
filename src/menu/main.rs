@@ -30,7 +30,7 @@ pub fn setup_ui(
 ) {
     // default player count
     if player_count.is_none() {
-        commands.insert_resource(PlayerCount(4));
+        commands.insert_resource(PlayerCount(2));
     }
 
     // ui camera

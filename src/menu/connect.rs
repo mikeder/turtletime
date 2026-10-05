@@ -32,6 +32,19 @@ pub struct ConnectData {
     pub lobby_id: String,
 }
 
+/// How long to wait for the lobby to fill up before giving up.
+/// The wait starts over whenever a peer connects or disconnects.
+const LOBBY_TIMEOUT_SECS: f32 = 60.;
+
+#[derive(Resource)]
+pub struct LobbyTimeout(pub Timer);
+
+impl Default for LobbyTimeout {
+    fn default() -> Self {
+        LobbyTimeout(Timer::from_seconds(LOBBY_TIMEOUT_SECS, TimerMode::Once))
+    }
+}
+
 pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectData>) {
     let lobby_id = &connect_data.lobby_id;
     let room_url = format!("{MATCHBOX_ADDR}/{lobby_id}");
@@ -40,25 +53,51 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
     // remove old socket that may exist from previous round
     commands.remove_resource::<MatchboxSocket>();
     // insert new socket resource for next session
-    commands.insert_resource(MatchboxSocket::new_reliable(room_url));
+    // ggrs handles packet loss and ordering on its own, so the channel is unreliable
+    commands.insert_resource(MatchboxSocket::new_unreliable(room_url));
+    commands.insert_resource(LobbyTimeout::default());
     // commands.remove_resource::<ConnectData>();
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn lobby_system(
     mut commands: Commands,
-    mut socket: ResMut<MatchboxSocket>,
+    socket: Option<ResMut<MatchboxSocket>>,
     mut app_state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<NextState<GameState>>,
+    mut timeout: ResMut<LobbyTimeout>,
+    time: Res<Time>,
     player_count: Res<PlayerCount>,
     mut query: Query<&mut Text, With<LobbyText>>,
 ) {
+    // the socket is closed when the lobby fails, the only way out is back to the menu
+    let Some(mut socket) = socket else {
+        return;
+    };
+
     // regularly call update_peers to update the list of connected peers
-    for (peer, new_state) in socket.update_peers() {
+    let peer_changes = match socket.try_update_peers() {
+        Ok(peer_changes) => peer_changes,
+        Err(e) => {
+            warn!("matchbox socket closed: {:?}", e);
+            close_lobby(
+                &mut commands,
+                &mut query,
+                "Lost connection to the matchmaking server",
+            );
+            return;
+        }
+    };
+    for (peer, new_state) in &peer_changes {
         // you can also handle the specific dis(connections) as they occur:
         match new_state {
             PeerState::Connected => info!("peer {peer:?} connected"),
             PeerState::Disconnected => info!("peer {peer:?} disconnected"),
         }
+    }
+    if !peer_changes.is_empty() {
+        // the lobby is still filling up, give it more time
+        timeout.0.reset();
     }
 
     let connected_peers = socket.connected_peers().count();
@@ -67,6 +106,16 @@ pub fn lobby_system(
         text.0 = format!("Waiting for {remaining} more player(s)",);
     }
     if remaining > 0 {
+        // a peer we can't reach never shows up as connected and matchbox doesn't
+        // report the failure, so all we can do is stop waiting at some point
+        if timeout.0.tick(time.delta()).is_finished() {
+            warn!("lobby timed out waiting for {remaining} more player(s)");
+            close_lobby(
+                &mut commands,
+                &mut query,
+                "Could not connect to all players",
+            );
+        }
         return;
     }
 
@@ -118,6 +167,19 @@ pub fn lobby_system(
     commands.insert_resource(AgreedRandom::new(peers));
     app_state.set(AppState::RoundOnline);
     game_state.set(GameState::Playing);
+}
+
+/// Give up on the lobby: leave the room so other players stop waiting on us
+/// and tell the player what happened.
+fn close_lobby(
+    commands: &mut Commands,
+    query: &mut Query<&mut Text, With<LobbyText>>,
+    reason: &str,
+) {
+    commands.remove_resource::<MatchboxSocket>();
+    if let Ok(mut text) = query.single_mut() {
+        text.0 = reason.to_owned();
+    }
 }
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
@@ -231,5 +293,51 @@ pub fn btn_listeners(
 pub fn cleanup_ui(query: Query<Entity, With<MenuConnectUI>>, mut commands: Commands) {
     for e in query.iter() {
         commands.entity(e).despawn();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::time::TimeUpdateStrategy;
+    use std::time::Duration;
+
+    #[test]
+    fn lobby_gives_up_when_it_does_not_fill() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin))
+            .init_state::<AppState>()
+            .init_state::<GameState>()
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+                100,
+            )))
+            .insert_resource(PlayerCount(2))
+            .insert_resource(LobbyTimeout::default())
+            // nothing is listening here, no peer will ever connect
+            .insert_resource(MatchboxSocket::new_unreliable("ws://127.0.0.1:9/test"))
+            .add_systems(Update, lobby_system);
+        let text = app.world_mut().spawn((Text::default(), LobbyText)).id();
+
+        // the first update has no time delta yet, so this stops just short of the timeout
+        for _ in 0..LOBBY_TIMEOUT_SECS as usize * 10 {
+            app.update();
+        }
+        assert!(app.world().contains_resource::<MatchboxSocket>());
+        assert_eq!(
+            app.world().get::<Text>(text).unwrap().0,
+            "Waiting for 1 more player(s)"
+        );
+
+        app.update();
+        app.update();
+        assert!(!app.world().contains_resource::<MatchboxSocket>());
+        assert_eq!(
+            app.world().get::<Text>(text).unwrap().0,
+            "Could not connect to all players"
+        );
+        assert_eq!(
+            *app.world().resource::<State<AppState>>().get(),
+            AppState::Loading
+        );
     }
 }
