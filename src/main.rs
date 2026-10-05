@@ -22,6 +22,8 @@ fn main() {
                     meta_check: AssetMetaCheck::Never,
                     ..default()
                 })
+                // pixel art, don't blur textures when they are scaled up
+                .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         canvas: Some("#bevy".to_owned()), // use for trunk, remove for wasm-server-runner
