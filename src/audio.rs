@@ -1,14 +1,15 @@
 use std::time::Duration;
 
 use crate::player::components::Expired;
+use crate::player::plugin::{EdibleSystemSet, PlayerSystemSet};
 use crate::{AppState, GameState, FPS};
-use bevy::diagnostic::FrameCount;
 use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
+use bevy_ggrs::{GgrsSchedule, RollbackFrameCount};
 use bevy_kira_audio::prelude::*;
 use bevy_kira_audio::{Audio, AudioPlugin};
 
-const MAX_SOUND_DELAY_FRAMES: u32 = 10;
+const MAX_SOUND_DELAY_FRAMES: i32 = 10;
 
 pub struct InternalAudioPlugin;
 
@@ -19,21 +20,29 @@ impl Plugin for InternalAudioPlugin {
             .init_resource::<PlaybackStates>()
             .add_systems(OnExit(AppState::Loading), init_audio)
             .add_systems(Update, sync_rollback_sounds)
-            .add_systems(Update, remove_finished_sounds)
             .add_systems(Update, update_looped_sounds)
-            .add_systems(OnEnter(GameState::Paused), stop_all_sounds);
+            .add_systems(OnEnter(GameState::Paused), stop_all_sounds)
+            // expiring sounds changes rollback state, so it has to happen in the
+            // rollback schedule, right before the edible systems remove expired entities
+            .add_systems(
+                GgrsSchedule,
+                remove_finished_sounds
+                    .after(PlayerSystemSet)
+                    .before(EdibleSystemSet)
+                    .run_if(in_state(GameState::Playing)),
+            );
     }
 }
 
 /// Rollback Audio
 /// https://johanhelsing.studio/posts/cargo-space-devlog-4
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct RollbackSound {
     /// the actual sound effect to play
     pub clip: Handle<AudioSource>,
-    /// when the sound effect should have started playing
-    pub start_frame: u32,
+    /// the rollback frame the sound effect should have started playing on
+    pub start_frame: i32,
     /// differentiates several unique instances of the same sound playing at once.
     /// for example, two players shooting at the same time
     pub sub_key: u32,
@@ -68,7 +77,7 @@ fn sync_rollback_sounds(
     mut audio_instances: ResMut<Assets<AudioInstance>>,
     desired_query: Query<&RollbackSound>,
     audio: Res<Audio>,
-    frame: Res<FrameCount>,
+    frame: Res<RollbackFrameCount>,
 ) {
     // remove any finished sound effects
     current_state.playing.retain(|_, handle| {
@@ -93,10 +102,7 @@ fn sync_rollback_sounds(
             if frames_late <= MAX_SOUND_DELAY_FRAMES {
                 if frames_late > 0 {
                     // todo: seek if time critical
-                    info!(
-                        "playing sound effect {} frames late",
-                        frame.0 - rollback_sound.start_frame
-                    );
+                    info!("playing sound effect {} frames late", frames_late);
                 }
                 let instance_handle = audio.play(rollback_sound.clip.clone()).handle();
                 current_state
@@ -126,7 +132,7 @@ fn sync_rollback_sounds(
 }
 
 fn remove_finished_sounds(
-    frame: Res<FrameCount>,
+    frame: Res<RollbackFrameCount>,
     query: Query<(Entity, &RollbackSound)>,
     mut commands: Commands,
     audio_sources: Res<Assets<AudioSource>>,
@@ -136,7 +142,7 @@ fn remove_finished_sounds(
         if let Some(audio_source) = audio_sources.get(&sfx.clip) {
             let frames_played = frame.0 - sfx.start_frame;
             let seconds_to_play = audio_source.sound.duration().as_secs_f64();
-            let frames_to_play = (seconds_to_play * FPS as f64) as u32;
+            let frames_to_play = (seconds_to_play * FPS as f64) as i32;
 
             if frames_played >= frames_to_play {
                 commands.entity(entity).insert(Expired);

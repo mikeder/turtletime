@@ -7,51 +7,12 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WINIT_WINDOWS;
 use bevy::DefaultPlugins;
-use bevy_ggrs::{GgrsPlugin, ReadInputs, RollbackApp, RollbackFrameRate};
 use std::io::Cursor;
-use turtle_time::npc::components::{EdibleTarget, Goose, HasTarget};
-use turtle_time::player::checksum::Checksum;
-use turtle_time::player::components::{
-    Edible, EdibleSpawnTimer, Expired, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Player, PlayerHealth, PlayerHealthBar, PlayerPoop, PlayerPoopTimer, PlayerSpeed,
-    PlayerSpeedBoost, RoundComponent,
-};
-use turtle_time::player::input::{input, GGRSConfig, PlayerControls};
-use turtle_time::player::resources::AgreedRandom;
-use turtle_time::{GamePlugin, ASPECT_RATIO, FPS, MAP_HEIGHT};
+use turtle_time::{GamePlugin, ASPECT_RATIO, MAP_HEIGHT};
 use winit::window::Icon;
 
 fn main() {
     let mut app = App::new();
-
-    // TODO: move GGRS plugin setup out of mains
-    app.add_plugins(GgrsPlugin::<GGRSConfig>::default())
-        .insert_resource(RollbackFrameRate(FPS))
-        .add_systems(ReadInputs, input)
-        .rollback_component_with_clone::<Checksum>()
-        .rollback_component_with_clone::<Edible>()
-        .rollback_component_with_clone::<EdibleTarget>()
-        .rollback_component_with_clone::<Expired>()
-        .rollback_component_with_clone::<Fireball>()
-        .rollback_component_with_clone::<FireballAmmo>()
-        .rollback_component_with_clone::<FireballReady>()
-        .rollback_component_with_clone::<FireballMovement>()
-        .rollback_component_with_clone::<FireballTimer>()
-        .rollback_component_with_clone::<Goose>()
-        .rollback_component_with_clone::<HasTarget>()
-        .rollback_component_with_clone::<Player>()
-        .rollback_component_with_clone::<PlayerHealth>()
-        .rollback_component_with_clone::<PlayerHealthBar>()
-        .rollback_component_with_clone::<PlayerSpeed>()
-        .rollback_component_with_clone::<PlayerSpeedBoost>()
-        .rollback_component_with_clone::<PlayerControls>()
-        .rollback_component_with_clone::<PlayerPoop>()
-        .rollback_component_with_clone::<PlayerPoopTimer>()
-        .rollback_component_with_clone::<RoundComponent>()
-        .rollback_component_with_clone::<Transform>()
-        .rollback_resource_with_clone::<EdibleSpawnTimer>()
-        // edibles spawn at random positions, so the shared rng must roll back with the world
-        .rollback_resource_with_clone::<AgreedRandom>();
 
     app.insert_resource(ClearColor(Color::srgb(0.0, 0.3, 0.0)))
         .add_plugins(

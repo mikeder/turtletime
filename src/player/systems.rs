@@ -28,11 +28,10 @@ use crate::player::resources::PlayersReady;
 use crate::{AppState, FIXED_TICK_MS, FPS, HEALTH_BAR_Y_OFFSET};
 use crate::{GameState, TILE_SIZE};
 use bevy::color::palettes::css::{GOLD, GREEN, ORANGE_RED, RED};
-use bevy::diagnostic::FrameCount;
 use bevy::math::vec3;
 use bevy::prelude::*;
 use bevy_ggrs::Rollback;
-use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs};
+use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, RollbackFrameCount};
 use ggrs::InputStatus;
 use rand::RngExt;
 
@@ -424,7 +423,7 @@ pub fn wall_collision_check(target_player_pos: Vec3, wall_translation: Vec3) -> 
 
 pub fn player_poops(
     mut commands: Commands,
-    frame: Res<FrameCount>,
+    frame: Res<RollbackFrameCount>,
     sounds: Res<AudioAssets>,
     textures: Res<TextureAssets>,
     player_query: Query<(&PlayerControls, &Transform, &PlayerSpeedBoost, &Player)>,
@@ -619,7 +618,7 @@ pub fn spawn_strawberry_on_player_spawn_points(
 // TODO: add sound
 pub fn player_ate_strawberry_system(
     mut commands: Commands,
-    frame: Res<FrameCount>,
+    frame: Res<RollbackFrameCount>,
     sounds: Res<AudioAssets>,
     mut player_query: Query<(&Transform, &mut PlayerSpeedBoost), With<Player>>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
@@ -688,7 +687,7 @@ pub fn spawn_chili_pepper_over_time(
 // TODO: add sound
 pub fn player_ate_chili_pepper_system(
     mut commands: Commands,
-    frame: Res<FrameCount>,
+    frame: Res<RollbackFrameCount>,
     sounds: Res<AudioAssets>,
     mut player_query: Query<(&Transform, &mut FireballAmmo), (With<Player>, Without<Fireball>)>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
@@ -752,7 +751,7 @@ pub fn spawn_lettuce_over_time(
 
 pub fn player_ate_lettuce_system(
     mut commands: Commands,
-    frame: Res<FrameCount>,
+    frame: Res<RollbackFrameCount>,
     sounds: Res<AudioAssets>,
     mut player_query: Query<(&Transform, &mut PlayerHealth), (With<Player>, Without<Fireball>)>,
     edible_query: Query<(Entity, &Edible, &Transform), Without<Expired>>,
@@ -810,7 +809,7 @@ pub fn shoot_fireballs(
     mut commands: Commands,
     images: Res<TextureAssets>,
     sounds: Res<AudioAssets>,
-    frame: Res<FrameCount>,
+    frame: Res<RollbackFrameCount>,
 
     mut query: Query<(
         Entity,

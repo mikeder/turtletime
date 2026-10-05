@@ -7,6 +7,9 @@ mod map;
 mod menu;
 pub mod npc;
 pub mod player;
+mod rollback;
+#[cfg(test)]
+mod synctest;
 
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
@@ -19,6 +22,7 @@ use map::tilemap::TileMapPlugin;
 use menu::plugin::MenuPlugin;
 use npc::plugin::GoosePlugin;
 use player::plugin::PlayerPlugin;
+use rollback::RollbackPlugin;
 
 #[cfg(debug_assertions)]
 use bevy::diagnostic::LogDiagnosticsPlugin;
@@ -79,6 +83,7 @@ impl Plugin for GamePlugin {
         app.init_state::<AppState>()
             .init_state::<GameState>()
             .add_plugins((
+                RollbackPlugin,
                 AsciiPlugin,
                 LoadingPlugin,
                 GraphicsPlugin,
