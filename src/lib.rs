@@ -1,5 +1,6 @@
 mod ascii;
 mod audio;
+mod blink;
 pub mod debug;
 mod graphics;
 mod loading;
@@ -16,6 +17,7 @@ use crate::loading::LoadingPlugin;
 use ascii::AsciiPlugin;
 use bevy::prelude::*;
 use bevy::{app::App, diagnostic::FrameTimeDiagnosticsPlugin};
+use blink::BlinkPlugin;
 use debug::plugin::{ConsolePlugin, DebugPlugin};
 use graphics::GraphicsPlugin;
 use map::tilemap::TileMapPlugin;
@@ -87,6 +89,7 @@ impl Plugin for GamePlugin {
                 AsciiPlugin,
                 LoadingPlugin,
                 GraphicsPlugin,
+                BlinkPlugin,
                 TileMapPlugin,
                 MenuPlugin,
                 InternalAudioPlugin,
