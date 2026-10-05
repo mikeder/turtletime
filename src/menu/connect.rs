@@ -30,6 +30,8 @@ pub struct LocalHandle(pub usize);
 #[derive(Resource)]
 pub struct ConnectData {
     pub lobby_id: String,
+    /// the code friends type to end up in the same lobby, quick matches have none
+    pub lobby_code: Option<String>,
 }
 
 /// How long to wait for the lobby to fill up before giving up.
@@ -187,32 +189,45 @@ fn close_lobby(
     }
 }
 
-pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
+pub fn setup_ui(
+    mut commands: Commands,
+    font_assets: Res<FontAssets>,
+    connect_data: Res<ConnectData>,
+) {
     let font = &font_assets.fira_sans;
 
     // ui camera
     commands.spawn((Camera2d, Msaa::Off)).insert(MenuConnectUI);
 
     // root node
-    commands.spawn((
-        ui::screen(),
-        MenuConnectUI,
-        children![
-            ui::heading(font, "Online match"),
+    commands
+        .spawn((ui::screen(), MenuConnectUI))
+        .with_children(|parent| {
+            parent.spawn(ui::heading(font, "Online match"));
             // lobby status display
-            (
+            parent.spawn((
                 ui::body(font, "Looking for players"),
                 TextLayout::new_with_justify(Justify::Center),
                 LobbyText,
-            ),
-            ui::spacer(10.),
+            ));
+            // lobby code display, so the player can pass it on while waiting
+            if let Some(lobby_code) = &connect_data.lobby_code {
+                parent.spawn((
+                    ui::row(),
+                    children![
+                        ui::body(font, "Lobby code"),
+                        ui::text(font, lobby_code.clone(), ui::HEADING_SIZE, ui::LETTUCE),
+                    ],
+                ));
+                parent.spawn(ui::hint(font, "Friends join by typing this code"));
+            }
+            parent.spawn(ui::spacer(10.));
             // back button
-            (
+            parent.spawn((
                 ui::button(font, "Back to menu", MenuButton::Secondary),
                 MenuConnectBtn::Back,
-            ),
-        ],
-    ));
+            ));
+        });
 }
 
 pub fn btn_listeners(

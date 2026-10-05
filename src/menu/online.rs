@@ -217,6 +217,7 @@ pub fn btn_listeners(
                 MenuOnlineBtn::QuickMatch => {
                     commands.insert_resource(ConnectData {
                         lobby_id: format!("turtletime_{}?next={}", VERSION, player_count.0),
+                        lobby_code: None,
                     });
                     state.set(AppState::MenuConnect);
                 }
@@ -230,6 +231,7 @@ pub fn btn_listeners(
     if join_lobby {
         commands.insert_resource(ConnectData {
             lobby_id: format!("turtletime_{}_{}", VERSION, lobby_id.0),
+            lobby_code: Some(lobby_id.0.clone()),
         });
         state.set(AppState::MenuConnect);
     }
