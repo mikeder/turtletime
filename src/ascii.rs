@@ -9,9 +9,6 @@ pub struct AsciiSheet {
     pub layout: Handle<TextureAtlasLayout>,
 }
 
-#[derive(Component)]
-pub struct AsciiText;
-
 impl Plugin for AsciiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, load_ascii);

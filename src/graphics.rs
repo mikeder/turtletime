@@ -20,8 +20,6 @@ pub struct FrameAnimation {
     pub frames: Vec<usize>,
     pub current_frame: usize,
 }
-#[derive(Component)]
-pub struct Border;
 
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
