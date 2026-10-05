@@ -1,6 +1,7 @@
 use super::connect::{ConnectData, LocalHandle};
 use super::online::PlayerCount;
-use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, VERSION};
+use super::plugin::VERSION;
+use super::ui::{self, MenuButton};
 use crate::loading::{FontAssets, TextureAssets};
 use crate::player::input::GGRSConfig;
 use crate::player::resources::AgreedRandom;
@@ -32,195 +33,46 @@ pub fn setup_ui(
     if player_count.is_none() {
         commands.insert_resource(PlayerCount(2));
     }
+    let font = &font_assets.fira_sans;
 
     // ui camera
     commands.spawn((Camera2d, Msaa::Off)).insert(MainMenuUI);
 
     // root node
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.),
-                right: Val::Px(0.),
-                top: Val::Px(0.),
-                bottom: Val::Px(0.),
-                flex_direction: FlexDirection::Column,
-                align_content: AlignContent::Center,
-                align_items: AlignItems::Center,
-                align_self: AlignSelf::Center,
-                justify_content: JustifyContent::Center,
-                ..Default::default()
-            },
-            BackgroundColor(Color::NONE),
-        ))
-        .with_children(|parent| {
-            parent.spawn((
-                Text::new("Turtle Time!"),
-                TextFont {
-                    font: font_assets.fira_sans.clone(),
-                    font_size: 50.0,
-                    ..default()
-                },
-                TextColor(BUTTON_TEXT),
-            ));
-
+    commands.spawn((
+        ui::screen(),
+        MainMenuUI,
+        children![
+            ui::title(font, "Turtle Time!"),
             // logo
-            parent.spawn((
+            (
                 ImageNode::new(image_assets.texture_turtle_cheeks2.clone()),
                 Node {
                     width: Val::Px(128.0),
                     height: Val::Px(128.0),
-                    margin: UiRect::all(Val::Px(16.)),
-                    padding: UiRect::all(Val::Px(16.)),
+                    margin: UiRect::bottom(Val::Px(8.)),
                     ..Default::default()
                 },
-            ));
-
-            // online match button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(200.0),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: UiRect::all(Val::Px(16.)),
-                        padding: UiRect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    BackgroundColor(NORMAL_BUTTON),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Online"),
-                        TextFont {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            ..default()
-                        },
-                        TextColor(BUTTON_TEXT),
-                    ));
-                })
-                .insert(MainMenuBtn::OnlineMatch);
-
-            // local mode button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(200.0),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: UiRect::all(Val::Px(16.)),
-                        padding: UiRect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    BackgroundColor(NORMAL_BUTTON),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Local"),
-                        TextFont {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            ..default()
-                        },
-                        TextColor(BUTTON_TEXT),
-                    ));
-                })
-                .insert(MainMenuBtn::LocalMatch);
-
-            // local mode button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(200.0),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: UiRect::all(Val::Px(16.)),
-                        padding: UiRect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    BackgroundColor(NORMAL_BUTTON),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Options"),
-                        TextFont {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            ..default()
-                        },
-                        TextColor(BUTTON_TEXT),
-                    ));
-                })
-                .insert(MainMenuBtn::Options);
-
-            // quit button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(200.0),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: UiRect::all(Val::Px(16.)),
-                        padding: UiRect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    BackgroundColor(NORMAL_BUTTON),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Quit"),
-                        TextFont {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            ..default()
-                        },
-                        TextColor(BUTTON_TEXT),
-                    ));
-                })
-                .insert(MainMenuBtn::Quit);
-
-            parent.spawn((
-                Text::new(VERSION),
-                TextFont {
-                    font: font_assets.fira_sans.clone(),
-                    font_size: 28.0,
-                    ..default()
-                },
-                TextColor(BUTTON_TEXT),
-            ));
-        })
-        .insert(MainMenuUI);
-}
-
-pub fn btn_visuals(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<MainMenuBtn>),
-    >,
-) {
-    for (interaction, mut color) in interaction_query.iter_mut() {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = PRESSED_BUTTON.into();
-            }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
+            ),
+            (
+                ui::button(font, "Online match", MenuButton::Primary),
+                MainMenuBtn::OnlineMatch,
+            ),
+            (
+                ui::button(font, "Local match", MenuButton::Secondary),
+                MainMenuBtn::LocalMatch,
+            ),
+            (
+                ui::button(font, "Controls", MenuButton::Secondary),
+                MainMenuBtn::Options,
+            ),
+            (
+                ui::button(font, "Quit", MenuButton::Secondary),
+                MainMenuBtn::Quit,
+            ),
+            ui::hint(font, format!("Version {VERSION}")),
+        ],
+    ));
 }
 
 pub fn btn_listeners(

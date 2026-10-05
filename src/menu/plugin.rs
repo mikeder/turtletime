@@ -1,12 +1,7 @@
-use crate::menu::{connect, main, online, options, win};
+use crate::menu::{connect, main, online, options, ui, win};
 use crate::AppState;
 use bevy::prelude::*;
 
-pub const DISABLED_BUTTON: Color = Color::srgb(0.8, 0.5, 0.5);
-pub const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
-pub const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
-pub const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
-pub const BUTTON_TEXT: Color = Color::srgb(0.9, 0.9, 0.9);
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct MenuPlugin;
@@ -16,11 +11,13 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app
+            // hover, press and disabled looks are the same for every menu
+            .add_systems(Update, ui::update_buttons)
             // main menu
             .add_systems(OnEnter(AppState::MenuMain), main::setup_ui)
             .add_systems(
                 Update,
-                (main::btn_visuals, main::btn_listeners).run_if(in_state(AppState::MenuMain)),
+                main::btn_listeners.run_if(in_state(AppState::MenuMain)),
             )
             .add_systems(OnExit(AppState::MenuMain), main::cleanup_ui)
             //online menu
@@ -29,9 +26,8 @@ impl Plugin for MenuPlugin {
                 Update,
                 (
                     online::update_lobby_id,
-                    online::update_lobby_id_display,
+                    online::update_lobby_code_display,
                     online::update_lobby_btn,
-                    online::btn_visuals,
                     online::btn_listeners,
                     online::update_player_count_display,
                 )
@@ -45,11 +41,7 @@ impl Plugin for MenuPlugin {
             )
             .add_systems(
                 Update,
-                (
-                    connect::lobby_system,
-                    connect::btn_visuals,
-                    connect::btn_listeners,
-                )
+                (connect::lobby_system, connect::btn_listeners)
                     .run_if(in_state(AppState::MenuConnect)),
             )
             .add_systems(OnExit(AppState::MenuConnect), connect::cleanup_ui)
@@ -57,16 +49,12 @@ impl Plugin for MenuPlugin {
             .add_systems(OnEnter(AppState::MenuOptions), options::setup_ui)
             .add_systems(
                 Update,
-                (options::btn_visuals, options::btn_listeners)
-                    .run_if(in_state(AppState::MenuOptions)),
+                options::btn_listeners.run_if(in_state(AppState::MenuOptions)),
             )
             .add_systems(OnExit(AppState::MenuOptions), options::cleanup_ui)
             // win menu
             .add_systems(OnEnter(AppState::Win), win::setup_ui)
-            .add_systems(
-                Update,
-                (win::btn_visuals, win::btn_listeners).run_if(in_state(AppState::Win)),
-            )
+            .add_systems(Update, win::btn_listeners.run_if(in_state(AppState::Win)))
             .add_systems(OnExit(AppState::Win), win::cleanup_ui);
     }
 }

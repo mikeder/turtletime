@@ -22,12 +22,13 @@ use crate::loading::{AudioAssets, FontAssets, TextureAssets};
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
 use crate::menu::connect::LocalHandle;
 use crate::menu::online::PlayerCount;
+use crate::menu::ui;
 use crate::menu::win::MatchData;
 use crate::player::components::Expired;
 use crate::player::resources::PlayersReady;
 use crate::{AppState, FIXED_TICK_MS, FPS, HEALTH_BAR_Y_OFFSET};
 use crate::{GameState, TILE_SIZE};
-use bevy::color::palettes::css::{GOLD, GREEN, ORANGE_RED, RED};
+use bevy::color::palettes::css::{RED, TOMATO};
 use bevy::math::vec3;
 use bevy::prelude::*;
 use bevy_ggrs::Rollback;
@@ -47,67 +48,41 @@ pub fn create_ui(
         None => return, // Session hasn't started yet
     };
 
-    let player_name = format!("Player {}", player_handle);
+    // handles start at zero, people count from one
+    let player_name = format!("Player {}", player_handle + 1);
+    let font = &font_assets.fira_sans;
 
-    // root node
+    // root node, a shaded panel so the text stays readable on top of the map
     commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Auto,
-                right: Val::Px(10.),
-                top: Val::Px(10.),
-                bottom: Val::Auto,
+                right: Val::Px(12.),
+                top: Val::Px(12.),
                 flex_direction: FlexDirection::Column,
-                align_content: AlignContent::Start,
-                align_items: AlignItems::Center,
-                align_self: AlignSelf::Center,
-                justify_content: JustifyContent::Center,
+                align_items: AlignItems::FlexStart,
+                row_gap: Val::Px(2.),
+                padding: UiRect::axes(Val::Px(16.), Val::Px(10.)),
+                border_radius: BorderRadius::all(Val::Px(8.)),
                 ..Default::default()
             },
-            BackgroundColor(Color::NONE),
+            BackgroundColor(ui::SHADE),
+            children![
+                ui::text(font, player_name, ui::BUTTON_SIZE, ui::CREAM),
+                (
+                    ui::text(font, "", ui::BODY_SIZE, ui::CREAM),
+                    PlayerHealthText,
+                ),
+                (
+                    ui::text(font, "", ui::BODY_SIZE, ui::CREAM),
+                    PlayerFireballText,
+                ),
+                (
+                    ui::text(font, "", ui::BODY_SIZE, ui::CREAM),
+                    PlayerSpeedBoostText,
+                ),
+            ],
         ))
-        .with_children(|parent| {
-            parent.spawn((
-                Text::new(player_name),
-                TextFont {
-                    font: font_assets.fira_sans.clone(),
-                    font_size: 50.0,
-                    ..default()
-                },
-                TextColor(GOLD.into()),
-            ));
-            parent.spawn((
-                Text::default(),
-                TextFont {
-                    font: font_assets.fira_sans.clone(),
-                    font_size: 40.0,
-                    ..default()
-                },
-                TextColor(GOLD.into()),
-                PlayerHealthText,
-            ));
-            parent.spawn((
-                Text::default(),
-                TextFont {
-                    font: font_assets.fira_sans.clone(),
-                    font_size: 40.0,
-                    ..default()
-                },
-                TextColor(GOLD.into()),
-                PlayerFireballText,
-            ));
-            parent.spawn((
-                Text::default(),
-                TextFont {
-                    font: font_assets.fira_sans.clone(),
-                    font_size: 40.0,
-                    ..default()
-                },
-                TextColor(GOLD.into()),
-                PlayerSpeedBoostText,
-            ));
-        })
         .insert(RoundComponent)
         .insert(Name::new("PlayerUI"));
 }
@@ -129,15 +104,15 @@ pub fn update_player_health_text(
 
         for (mut text, mut text_color) in text_query.iter_mut() {
             let val = format!("Health: {}", health.0);
-            let mut color = GOLD;
+            let mut color = ui::CREAM;
             if health.0 == PLAYER_HEALTH_MAX {
-                color = GREEN
+                color = ui::LETTUCE
             } else if health.0 <= PLAYER_HEALTH_MID && health.0 > PLAYER_HEALTH_LOW {
-                color = ORANGE_RED
+                color = ui::CHILI
             } else if health.0 <= PLAYER_HEALTH_LOW {
-                color = RED
+                color = TOMATO.into()
             }
-            text_color.0 = color.into();
+            text_color.0 = color;
             text.0 = val;
         }
     }

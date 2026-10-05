@@ -1,5 +1,5 @@
 use super::online::PlayerCount;
-use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
+use super::ui::{self, MenuButton};
 use crate::loading::FontAssets;
 use crate::player::input::GGRSConfig;
 use crate::player::resources::AgreedRandom;
@@ -68,7 +68,7 @@ pub fn lobby_system(
     mut timeout: ResMut<LobbyTimeout>,
     time: Res<Time>,
     player_count: Res<PlayerCount>,
-    mut query: Query<&mut Text, With<LobbyText>>,
+    mut query: Query<(&mut Text, &mut TextColor), With<LobbyText>>,
 ) {
     // the socket is closed when the lobby fails, the only way out is back to the menu
     let Some(mut socket) = socket else {
@@ -83,7 +83,7 @@ pub fn lobby_system(
             close_lobby(
                 &mut commands,
                 &mut query,
-                "Lost connection to the matchmaking server",
+                "Lost connection to the matchmaking server.\nGo back and try again.",
             );
             return;
         }
@@ -102,8 +102,12 @@ pub fn lobby_system(
 
     let connected_peers = socket.connected_peers().count();
     let remaining = player_count.0 - (connected_peers + 1);
-    if let Ok(mut text) = query.single_mut() {
-        text.0 = format!("Waiting for {remaining} more player(s)",);
+    if let Ok((mut text, _)) = query.single_mut() {
+        let players = if remaining == 1 { "player" } else { "players" };
+        let waiting = format!("Waiting for {remaining} more {players}");
+        if text.0 != waiting {
+            text.0 = waiting;
+        }
     }
     if remaining > 0 {
         // a peer we can't reach never shows up as connected and matchbox doesn't
@@ -113,7 +117,7 @@ pub fn lobby_system(
             close_lobby(
                 &mut commands,
                 &mut query,
-                "Could not connect to all players",
+                "Could not connect to all players.\nGo back and try again.",
             );
         }
         return;
@@ -173,106 +177,42 @@ pub fn lobby_system(
 /// and tell the player what happened.
 fn close_lobby(
     commands: &mut Commands,
-    query: &mut Query<&mut Text, With<LobbyText>>,
+    query: &mut Query<(&mut Text, &mut TextColor), With<LobbyText>>,
     reason: &str,
 ) {
     commands.remove_resource::<MatchboxSocket>();
-    if let Ok(mut text) = query.single_mut() {
+    if let Ok((mut text, mut color)) = query.single_mut() {
         text.0 = reason.to_owned();
+        color.0 = ui::CHILI;
     }
 }
 
 pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
+    let font = &font_assets.fira_sans;
+
     // ui camera
     commands.spawn((Camera2d, Msaa::Off)).insert(MenuConnectUI);
 
     // root node
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.),
-                right: Val::Px(0.),
-                top: Val::Px(0.),
-                bottom: Val::Px(0.),
-                flex_direction: FlexDirection::Column,
-                align_content: AlignContent::Center,
-                align_items: AlignItems::Center,
-                align_self: AlignSelf::Center,
-                justify_content: JustifyContent::Center,
-                ..Default::default()
-            },
-            BackgroundColor(Color::NONE),
-        ))
-        .with_children(|parent| {
-            // lobby id display
-            parent
-                .spawn((
-                    Node {
-                        align_self: AlignSelf::Center,
-                        justify_content: JustifyContent::Center,
-                        ..Default::default()
-                    },
-                    Text::new("Searching a match..."),
-                    TextFont {
-                        font: font_assets.fira_sans.clone(),
-                        font_size: 32.,
-                        ..default()
-                    },
-                    TextColor(BUTTON_TEXT),
-                ))
-                .insert(LobbyText);
-
+    commands.spawn((
+        ui::screen(),
+        MenuConnectUI,
+        children![
+            ui::heading(font, "Online match"),
+            // lobby status display
+            (
+                ui::body(font, "Looking for players"),
+                TextLayout::new_with_justify(Justify::Center),
+                LobbyText,
+            ),
+            ui::spacer(10.),
             // back button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(250.),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: UiRect::all(Val::Px(16.)),
-                        padding: UiRect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    BackgroundColor(NORMAL_BUTTON),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Back to Menu"),
-                        TextFont {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            ..default()
-                        },
-                        TextColor(BUTTON_TEXT),
-                    ));
-                })
-                .insert(MenuConnectBtn::Back);
-        })
-        .insert(MenuConnectUI);
-}
-
-pub fn btn_visuals(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<MenuConnectBtn>),
-    >,
-) {
-    for (interaction, mut color) in interaction_query.iter_mut() {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = PRESSED_BUTTON.into();
-            }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
+            (
+                ui::button(font, "Back to menu", MenuButton::Secondary),
+                MenuConnectBtn::Back,
+            ),
+        ],
+    ));
 }
 
 pub fn btn_listeners(
@@ -325,7 +265,7 @@ mod tests {
         assert!(app.world().contains_resource::<MatchboxSocket>());
         assert_eq!(
             app.world().get::<Text>(text).unwrap().0,
-            "Waiting for 1 more player(s)"
+            "Waiting for 1 more player"
         );
 
         app.update();
@@ -333,7 +273,7 @@ mod tests {
         assert!(!app.world().contains_resource::<MatchboxSocket>());
         assert_eq!(
             app.world().get::<Text>(text).unwrap().0,
-            "Could not connect to all players"
+            "Could not connect to all players.\nGo back and try again."
         );
         assert_eq!(
             *app.world().resource::<State<AppState>>().get(),

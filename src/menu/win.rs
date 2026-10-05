@@ -1,5 +1,5 @@
 use super::connect::ConnectData;
-use super::plugin::{BUTTON_TEXT, HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
+use super::ui::{self, MenuButton};
 use crate::loading::FontAssets;
 use crate::AppState;
 use bevy::prelude::*;
@@ -24,129 +24,33 @@ pub fn setup_ui(
     font_assets: Res<FontAssets>,
     connect_data: Option<Res<ConnectData>>,
 ) {
-    let mut rematch_vis = Visibility::Hidden;
-    if connect_data.is_some() {
-        rematch_vis = Visibility::Visible;
-    }
+    let font = &font_assets.fira_sans;
 
     // ui camera
     commands.spawn((Camera2d, Msaa::Off)).insert(WinUI);
 
     // root node
     commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.),
-                right: Val::Px(0.),
-                top: Val::Px(0.),
-                bottom: Val::Px(0.),
-                flex_direction: FlexDirection::Column,
-                align_content: AlignContent::Center,
-                align_items: AlignItems::Center,
-                align_self: AlignSelf::Center,
-                justify_content: JustifyContent::Center,
-                ..Default::default()
-            },
-            BackgroundColor(Color::NONE),
-        ))
+        .spawn((ui::screen(), WinUI))
         .with_children(|parent| {
             // match result string
-            parent.spawn((
-                Node {
-                    align_self: AlignSelf::Center,
-                    justify_content: JustifyContent::Center,
-                    ..Default::default()
-                },
-                Text::new(match_data.result.clone()),
-                TextFont {
-                    font: font_assets.fira_sans.clone(),
-                    font_size: 96.,
-                    ..default()
-                },
-                TextColor(BUTTON_TEXT),
-            ));
-            // rematch button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(250.),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: UiRect::all(Val::Px(16.)),
-                        padding: UiRect::all(Val::Px(16.)),
-
-                        ..Default::default()
-                    },
-                    rematch_vis,
-                    BackgroundColor(NORMAL_BUTTON),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Rematch"),
-                        TextFont {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            ..default()
-                        },
-                        TextColor(BUTTON_TEXT),
-                    ));
-                })
-                .insert(MenuWinBtn::Rematch);
+            parent.spawn(ui::title(font, match_data.result.clone()));
+            parent.spawn(ui::spacer(10.));
+            // a rematch goes back to the lobby of an online match, local matches have none
+            if connect_data.is_some() {
+                parent.spawn((
+                    ui::button(font, "Rematch", MenuButton::Primary),
+                    MenuWinBtn::Rematch,
+                ));
+            }
             // back to menu button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(250.),
-                        height: Val::Px(65.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        margin: UiRect::all(Val::Px(16.)),
-                        padding: UiRect::all(Val::Px(16.)),
-                        ..Default::default()
-                    },
-                    BackgroundColor(NORMAL_BUTTON),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Back to Menu"),
-                        TextFont {
-                            font: font_assets.fira_sans.clone(),
-                            font_size: 40.0,
-                            ..default()
-                        },
-                        TextColor(BUTTON_TEXT),
-                    ));
-                })
-                .insert(MenuWinBtn::Back);
-        })
-        .insert(WinUI);
+            parent.spawn((
+                ui::button(font, "Back to menu", MenuButton::Secondary),
+                MenuWinBtn::Back,
+            ));
+        });
 
     commands.remove_resource::<MatchData>();
-}
-
-pub fn btn_visuals(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<MenuWinBtn>),
-    >,
-) {
-    for (interaction, mut color) in interaction_query.iter_mut() {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = PRESSED_BUTTON.into();
-            }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
 }
 
 pub fn btn_listeners(
