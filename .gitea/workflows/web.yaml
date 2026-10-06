@@ -22,6 +22,8 @@ env:
   # without lto and with parallel codegen the build is a lot faster.
   CARGO_PROFILE_RELEASE_LTO: "off"
   CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 16
+  # function names are only needed for stack traces and more than double the size of the wasm file
+  CARGO_PROFILE_RELEASE_STRIP: symbols
 
 jobs:
   build-web:
@@ -45,10 +47,6 @@ jobs:
       - name: Build Release
         run: |
           trunk build --release
-      - name: Optimize Wasm
-        uses: NiklasEi/wasm-opt-action@v2
-        with:
-          file: dist/*.wasm
         # Trunk cannot import assets from relative paths (see e.g. https://github.com/thedodd/trunk/issues/395)
         # We don't know on which base path the game gets served, so we need to rewrite all links to be relative
       - name: Make paths relative
@@ -68,6 +66,15 @@ jobs:
       - name: Build docker image
         run: |
           docker build -f build/web/Dockerfile -t "$IMAGE:$VERSION" -t "$IMAGE:latest" .
+      - name: Test docker image
+        run: |
+          docker run --rm "$IMAGE:$VERSION" sh -ec '
+            nginx -t
+            nginx
+            wget -q -O /dev/null http://127.0.0.1/
+            wasm=$(basename /usr/share/nginx/html/*.wasm)
+            wget -q -S -O /dev/null --header "Accept-Encoding: gzip" "http://127.0.0.1/$wasm" 2>&1 | grep -iE "HTTP/|content-(type|encoding|length)"
+          '
       # The token actions provide can't push to the container registry. Add a personal
       # access token with the write:package scope as the secret REGISTRY_TOKEN to publish.
       - name: Publish docker image
