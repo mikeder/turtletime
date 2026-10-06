@@ -1,6 +1,6 @@
 use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
-use super::resources::{HealthBarsAdded, PlayersReady};
+use super::resources::{HealthBarsAdded, PlayersReady, Spectating};
 use super::round::{
     cleanup_round, cleanup_session, disconnect_remote_players, remove_expired, setup_round,
 };
@@ -16,6 +16,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<EdibleSpawnTimer>()
+            .init_resource::<Spectating>()
             // round setup
             .add_systems(
                 OnEnter(GameState::Playing),
@@ -46,6 +47,7 @@ impl Plugin for PlayerPlugin {
                     update_player_fireball_text,
                     update_player_speed_boost_text,
                     update_synchronizing_text,
+                    update_spectating,
                 )
                     .distributive_run_if(in_state(GameState::Playing)),
             )

@@ -27,6 +27,11 @@ impl AgreedRandom {
 #[derive(Resource)]
 pub struct PlayersReady;
 
+/// Handle of the player the camera follows once the local player has died.
+/// Only the local player picks and sees this, so it is not part of the rollback state.
+#[derive(Resource, Default)]
+pub struct Spectating(pub Option<usize>);
+
 #[derive(Debug, Default, Reflect, Resource)]
 #[reflect(Resource)]
 pub struct HealthBarsAdded;

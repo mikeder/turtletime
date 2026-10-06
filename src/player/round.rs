@@ -6,7 +6,7 @@ use crate::{
     menu::connect::{LocalHandle, PlayerNames},
     player::{
         components::EdibleSpawnTimer,
-        resources::{HealthBarsAdded, PlayersReady},
+        resources::{HealthBarsAdded, PlayersReady, Spectating},
     },
 };
 
@@ -21,6 +21,7 @@ pub fn setup_round(mut commands: Commands) {
 
     commands.spawn((Camera2d, Msaa::Off, RoundComponent));
     commands.insert_resource(EdibleSpawnTimer::default());
+    commands.insert_resource(Spectating::default());
 }
 
 pub fn disconnect_remote_players(

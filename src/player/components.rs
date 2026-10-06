@@ -201,6 +201,19 @@ pub struct PlayerSpeedBoostText;
 #[derive(Component)]
 pub struct SynchronizingText;
 
+/// Shown to a dead player, tells them who they are watching.
+#[derive(Component)]
+pub struct SpectateUI;
+
+#[derive(Component)]
+pub struct SpectateText;
+
+#[derive(Component)]
+pub enum SpectateBtn {
+    Previous,
+    Next,
+}
+
 impl Default for Player {
     fn default() -> Self {
         Player {

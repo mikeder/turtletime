@@ -5,17 +5,17 @@ use super::components::{
     Edible, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
     FireballTimer, Player, PlayerFireballText, PlayerHealth, PlayerHealthBar, PlayerHealthBarPart,
     PlayerHealthText, PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost,
-    PlayerSpeedBoostText, RoundComponent, SynchronizingText, CHILI_PEPPER_AMMO_COUNT,
-    CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS, LETTUCE_HEALTH_GAIN, LETTUCE_SIZE,
-    PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID, PLAYER_SPEED_BOOST,
-    PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE, POOP_ENTITIES_MAX,
-    POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
+    PlayerSpeedBoostText, RoundComponent, SpectateBtn, SpectateText, SpectateUI, SynchronizingText,
+    CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
+    LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
+    PLAYER_SPEED_BOOST, PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE,
+    POOP_ENTITIES_MAX, POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
     INPUT_SPRINT, INPUT_UP,
 };
-use super::resources::{AgreedRandom, HealthBarsAdded};
+use super::resources::{AgreedRandom, HealthBarsAdded, Spectating};
 
 use crate::audio::{FadedLoopSound, RollbackSound, RollbackSoundBundle};
 use crate::graphics::{CharacterSheet, FrameAnimation};
@@ -113,6 +113,115 @@ pub fn create_ui(
         ))
         .insert(RoundComponent)
         .insert(Name::new("SynchronizingUI"));
+
+    // shown once the local player has died and watches the others
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.),
+                right: Val::Px(0.),
+                bottom: Val::Px(24.),
+                justify_content: JustifyContent::Center,
+                ..Default::default()
+            },
+            Visibility::Hidden,
+            SpectateUI,
+            children![(
+                Node {
+                    align_items: AlignItems::Center,
+                    column_gap: Val::Px(16.),
+                    padding: UiRect::axes(Val::Px(16.), Val::Px(10.)),
+                    border_radius: BorderRadius::all(Val::Px(8.)),
+                    ..Default::default()
+                },
+                BackgroundColor(ui::SHADE),
+                children![
+                    (ui::small_button(font, "<"), SpectateBtn::Previous),
+                    (ui::body(font, ""), SpectateText),
+                    (ui::small_button(font, ">"), SpectateBtn::Next),
+                ],
+            )],
+        ))
+        .insert(RoundComponent)
+        .insert(Name::new("SpectateUI"));
+}
+
+/// A dead player watches the players that are still alive, the left and right
+/// arrow keys or the buttons next to the name switch between them.
+#[allow(clippy::too_many_arguments)]
+pub fn update_spectating(
+    keys: Res<ButtonInput<KeyCode>>,
+    local_handle: Option<Res<LocalHandle>>,
+    player_names: Option<Res<PlayerNames>>,
+    mut spectating: ResMut<Spectating>,
+    player_query: Query<&Player>,
+    buttons: Query<(&Interaction, &SpectateBtn), Changed<Interaction>>,
+    mut ui_query: Query<&mut Visibility, With<SpectateUI>>,
+    mut text_query: Query<&mut Text, With<SpectateText>>,
+) {
+    let Some(local_handle) = local_handle else {
+        return; // Session hasn't started yet
+    };
+
+    let mut alive = player_query
+        .iter()
+        .filter(|player| player.active)
+        .map(|player| player.handle)
+        .collect::<Vec<_>>();
+    alive.sort();
+
+    // this is checked every frame, a rollback can bring any player back to life
+    let target = if alive.is_empty() || alive.contains(&local_handle.0) {
+        None
+    } else {
+        let mut step = 0;
+        if keys.just_pressed(KeyCode::ArrowLeft) {
+            step -= 1;
+        }
+        if keys.just_pressed(KeyCode::ArrowRight) {
+            step += 1;
+        }
+        for (interaction, btn) in buttons.iter() {
+            if let Interaction::Pressed = *interaction {
+                match btn {
+                    SpectateBtn::Previous => step -= 1,
+                    SpectateBtn::Next => step += 1,
+                }
+            }
+        }
+
+        let watched = spectating
+            .0
+            .and_then(|h| alive.iter().position(|a| *a == h));
+        Some(match watched {
+            Some(i) => alive[(i as i32 + step).rem_euclid(alive.len() as i32) as usize],
+            // nobody picked yet, or the player that was watched died as well
+            None => alive[0],
+        })
+    };
+    if spectating.0 != target {
+        spectating.0 = target;
+    }
+
+    let wanted = if target.is_some() {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
+    for mut visibility in ui_query.iter_mut() {
+        if *visibility != wanted {
+            *visibility = wanted;
+        }
+    }
+    if let Some(handle) = target {
+        let watching = format!("Watching {}", player_label(player_names.as_deref(), handle));
+        for mut text in text_query.iter_mut() {
+            if text.0 != watching {
+                text.0 = watching.clone();
+            }
+        }
+    }
 }
 
 pub fn update_synchronizing_text(
@@ -213,14 +322,16 @@ pub fn update_player_speed_boost_text(
 
 pub fn camera_follow(
     player_handle: Option<Res<LocalHandle>>,
+    spectating: Res<Spectating>,
     player_query: Query<(&Transform, &Player), Without<Fireball>>,
     mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera>)>,
 ) {
-    // todo: follow another player when local player dies
     let player_handle = match player_handle {
         Some(handle) => handle.0,
         None => return, // Session hasn't started yet
     };
+    // a dead player follows the player they are watching
+    let player_handle = spectating.0.unwrap_or(player_handle);
 
     for (player_transform, player) in player_query.iter() {
         if player.handle != player_handle {
