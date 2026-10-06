@@ -24,16 +24,24 @@ pub struct DebugPlugin;
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         if cfg!(debug_assertions) {
-            app.add_plugins((EguiPlugin::default(), WorldInspectorPlugin::new()))
-                .register_type::<Checksum>()
-                .register_type::<ConsoleReady>()
-                .register_type::<LocalHandle>()
-                .register_type::<EdibleTarget>()
-                .register_type::<Edible>()
-                .register_type::<EdibleSpawnTimer>()
-                .register_type::<Player>()
-                .register_type::<PlayerHealth>()
-                .register_type::<HealthBarsAdded>();
+            app.add_plugins((
+                EguiPlugin {
+                    // the inspector doesn't need bindless textures, and asking for them
+                    // logs a warning on backends that don't have them, like metal
+                    bindless_mode_array_size: None,
+                    ..default()
+                },
+                WorldInspectorPlugin::new(),
+            ))
+            .register_type::<Checksum>()
+            .register_type::<ConsoleReady>()
+            .register_type::<LocalHandle>()
+            .register_type::<EdibleTarget>()
+            .register_type::<Edible>()
+            .register_type::<EdibleSpawnTimer>()
+            .register_type::<Player>()
+            .register_type::<PlayerHealth>()
+            .register_type::<HealthBarsAdded>();
         }
     }
 }

@@ -15,10 +15,10 @@ mod synctest;
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
 use ascii::AsciiPlugin;
+use bevy::app::App;
 use bevy::prelude::*;
-use bevy::{app::App, diagnostic::FrameTimeDiagnosticsPlugin};
 use blink::BlinkPlugin;
-use debug::plugin::{ConsolePlugin, DebugPlugin};
+use debug::plugin::ConsolePlugin;
 use graphics::GraphicsPlugin;
 use map::tilemap::TileMapPlugin;
 use menu::plugin::MenuPlugin;
@@ -26,8 +26,11 @@ use npc::plugin::GoosePlugin;
 use player::plugin::PlayerPlugin;
 use rollback::RollbackPlugin;
 
+// only debug builds show diagnostics and the inspector
 #[cfg(debug_assertions)]
-use bevy::diagnostic::LogDiagnosticsPlugin;
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
+#[cfg(debug_assertions)]
+use debug::plugin::DebugPlugin;
 
 pub const ASPECT_RATIO: f32 = 16.0 / 9.0;
 pub const MAP_HEIGHT: f32 = 768.0;
