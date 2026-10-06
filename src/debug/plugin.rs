@@ -13,7 +13,7 @@ use crate::{
         components::{Edible, EdibleSpawnTimer, Player, PlayerHealth},
         resources::HealthBarsAdded,
     },
-    AppState, GameState,
+    AppState,
 };
 
 use super::components::{ConsoleReady, ConsoleUpdateTimer, EdibleCount, PeerInfo};
@@ -43,7 +43,6 @@ pub struct ConsolePlugin;
 impl Plugin for ConsolePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnExit(AppState::Loading), setup_ui)
-            .add_systems(Update, log_ggrs_events.run_if(in_state(GameState::Playing)))
             .add_systems(Update, open_console)
             .add_systems(Update, count_edibles.run_if(resource_exists::<EdibleCount>))
             .add_systems(
@@ -102,16 +101,5 @@ pub fn update_peer_info(
             _ => (),
         }
         peer_info.0 = tmp;
-    }
-}
-
-pub fn log_ggrs_events(mut session: ResMut<Session<GGRSConfig>>) {
-    match session.as_mut() {
-        Session::P2P(s) => {
-            for event in s.events() {
-                info!("GGRS Event: {:?}", event);
-            }
-        }
-        _ => (),
     }
 }

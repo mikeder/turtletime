@@ -19,6 +19,8 @@ pub struct MatchData {
     pub winner: String,
     /// whether that is the local player
     pub won: bool,
+    /// names of the players that disconnected during the round
+    pub disconnected: Vec<String>,
 }
 
 pub fn setup_ui(
@@ -43,6 +45,15 @@ pub fn setup_ui(
             } else {
                 ui::text(font, "You Lost!", ui::HEADING_SIZE, ui::CHILI)
             });
+            // a win because the others left should not look like any other win
+            for name in &match_data.disconnected {
+                parent.spawn(ui::text(
+                    font,
+                    format!("{name} disconnected"),
+                    ui::BODY_SIZE,
+                    ui::CHILI,
+                ));
+            }
             parent.spawn(ui::spacer(10.));
             // a rematch goes back to the lobby of an online match, local matches have none
             if connect_data.is_some() {

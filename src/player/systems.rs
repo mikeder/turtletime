@@ -2,20 +2,23 @@ use std::time::Duration;
 
 use super::checksum::Checksum;
 use super::components::{
-    Edible, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Player, PlayerFireballText, PlayerHealth, PlayerHealthBar, PlayerHealthBarPart,
-    PlayerHealthText, PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost,
-    PlayerSpeedBoostText, RoundComponent, SpectateBtn, SpectateText, SpectateUI, SynchronizingText,
-    CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
-    LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
-    PLAYER_SPEED_BOOST, PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE,
-    POOP_ENTITIES_MAX, POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
+    ConnectionNoticeText, ConnectionNoticeUI, Edible, EdibleSpawnTimer, Fireball, FireballAmmo,
+    FireballMovement, FireballReady, FireballTimer, Player, PlayerFireballText, PlayerHealth,
+    PlayerHealthBar, PlayerHealthBarPart, PlayerHealthText, PlayerPoop, PlayerPoopTimer,
+    PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText, RoundComponent, SpectateBtn, SpectateText,
+    SpectateUI, SynchronizingText, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE,
+    FIREBALL_RADIUS, LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX,
+    PLAYER_HEALTH_MID, PLAYER_SPEED_BOOST, PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX,
+    PLAYER_SPEED_START, POOP_DAMAGE, POOP_ENTITIES_MAX, POOP_SIZE, STRAWBERRY_AMMO_COUNT,
+    STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
     INPUT_SPRINT, INPUT_UP,
 };
-use super::resources::{AgreedRandom, HealthBarsAdded, Spectating};
+use super::resources::{
+    AgreedRandom, Connections, HealthBarsAdded, Spectating, DISCONNECT_NOTICE_SECS,
+};
 
 use crate::audio::{FadedLoopSound, RollbackSound, RollbackSoundBundle};
 use crate::graphics::{CharacterSheet, FrameAnimation};
@@ -35,7 +38,7 @@ use bevy::prelude::*;
 use bevy_ggrs::Rollback;
 use bevy_ggrs::Session;
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, RollbackFrameCount};
-use ggrs::{InputStatus, SessionState};
+use ggrs::{GgrsEvent, InputStatus, SessionState};
 use rand::RngExt;
 
 pub fn create_ui(
@@ -145,6 +148,113 @@ pub fn create_ui(
         ))
         .insert(RoundComponent)
         .insert(Name::new("SpectateUI"));
+
+    // shown while another player has connection trouble or just disconnected
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(12.),
+                top: Val::Px(12.),
+                padding: UiRect::axes(Val::Px(16.), Val::Px(10.)),
+                border_radius: BorderRadius::all(Val::Px(8.)),
+                ..Default::default()
+            },
+            BackgroundColor(ui::SHADE),
+            Visibility::Hidden,
+            ConnectionNoticeUI,
+            children![(
+                ui::text(font, "", ui::BODY_SIZE, ui::CHILI),
+                ConnectionNoticeText,
+            )],
+        ))
+        .insert(RoundComponent)
+        .insert(Name::new("ConnectionNoticeUI"));
+}
+
+/// Keeps track of the connections to the other players. The events are gone
+/// once they are read, so this is the only place that reads them.
+pub fn read_session_events(
+    session: Option<ResMut<Session<GGRSConfig>>>,
+    mut connections: ResMut<Connections>,
+) {
+    let Some(mut session) = session else {
+        return;
+    };
+    let Session::P2P(session) = session.as_mut() else {
+        return;
+    };
+
+    for event in session.events().collect::<Vec<_>>() {
+        info!("GGRS Event: {:?}", event);
+        match event {
+            GgrsEvent::NetworkInterrupted { addr, .. } => {
+                for handle in session.handles_by_address(addr) {
+                    if !connections.disconnected.contains_key(&handle) {
+                        connections.interrupted.insert(handle);
+                    }
+                }
+            }
+            GgrsEvent::NetworkResumed { addr } => {
+                for handle in session.handles_by_address(addr) {
+                    connections.interrupted.remove(&handle);
+                }
+            }
+            GgrsEvent::Disconnected { addr } => {
+                for handle in session.handles_by_address(addr) {
+                    connections.interrupted.remove(&handle);
+                    connections.disconnected.entry(handle).or_insert_with(|| {
+                        Timer::from_seconds(DISCONNECT_NOTICE_SECS, TimerMode::Once)
+                    });
+                }
+            }
+            _ => (),
+        }
+    }
+}
+
+pub fn update_connection_notices(
+    time: Res<Time>,
+    player_names: Option<Res<PlayerNames>>,
+    mut connections: ResMut<Connections>,
+    mut ui_query: Query<&mut Visibility, With<ConnectionNoticeUI>>,
+    mut text_query: Query<&mut Text, With<ConnectionNoticeText>>,
+) {
+    if connections.interrupted.is_empty() && connections.disconnected.is_empty() {
+        return; // nothing to tell, and nothing was shown that has to go
+    }
+
+    let names = player_names.as_deref();
+    let mut lines = Vec::new();
+    for handle in &connections.interrupted {
+        lines.push(format!(
+            "{} is reconnecting...",
+            player_label(names, *handle)
+        ));
+    }
+    for (handle, timer) in connections.disconnected.iter_mut() {
+        // who disconnected is kept for the win screen, only the notice goes away
+        if !timer.tick(time.delta()).is_finished() {
+            lines.push(format!("{} disconnected", player_label(names, *handle)));
+        }
+    }
+
+    let wanted = if lines.is_empty() {
+        Visibility::Hidden
+    } else {
+        Visibility::Inherited
+    };
+    for mut visibility in ui_query.iter_mut() {
+        if *visibility != wanted {
+            *visibility = wanted;
+        }
+    }
+    let lines = lines.join("\n");
+    for mut text in text_query.iter_mut() {
+        if text.0 != lines {
+            text.0 = lines.clone();
+        }
+    }
 }
 
 /// A dead player watches the players that are still alive, the left and right
@@ -1124,13 +1234,17 @@ pub fn kill_players(
         ),
         (With<Player>, Without<Fireball>),
     >,
+    inputs: Res<PlayerInputs<GGRSConfig>>,
 ) {
     // collect and sort all players in play so we kill players in a deterministic order
     let mut players = player_query.iter_mut().collect::<Vec<_>>();
     players.sort_by_key(|e| e.0);
 
     for (_, mut player, health, mut animation, mut sprite) in players {
-        if health.0 <= 0 {
+        // a player that disconnected is out of the round, the session agrees with every
+        // remaining player on the frame that happened, so this is safe to roll back
+        let disconnected = inputs[player.handle].1 == InputStatus::Disconnected;
+        if health.0 <= 0 || disconnected {
             animation.timer.set_mode(TimerMode::Once);
             sprite.flip_y = true;
             player.active = false;
@@ -1144,6 +1258,7 @@ pub fn check_win_state(
     mut game_state: ResMut<NextState<GameState>>,
     player_handle: Option<Res<LocalHandle>>,
     player_names: Option<Res<PlayerNames>>,
+    connections: Res<Connections>,
     player_query: Query<(Entity, &Player), Without<Fireball>>,
 ) {
     let local_handle = match player_handle {
@@ -1165,6 +1280,11 @@ pub fn check_win_state(
         commands.insert_resource(MatchData {
             winner: player_label(player_names.as_deref(), winner),
             won: winner == local_handle,
+            disconnected: connections
+                .disconnected
+                .keys()
+                .map(|handle| player_label(player_names.as_deref(), *handle))
+                .collect(),
         });
         app_state.set(AppState::Win);
         game_state.set(GameState::Paused);

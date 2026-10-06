@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_matchbox::prelude::PeerId;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Resource, Clone)]
 pub struct AgreedRandom {
@@ -26,6 +27,19 @@ impl AgreedRandom {
 
 #[derive(Resource)]
 pub struct PlayersReady;
+
+/// How long the notice about a player that disconnected stays on screen.
+pub const DISCONNECT_NOTICE_SECS: f32 = 6.;
+
+/// What the session told us about the connections to the other players, by handle.
+/// This differs between players, so it is not part of the rollback state.
+#[derive(Resource, Default)]
+pub struct Connections {
+    /// players we stopped hearing from, they are dropped if that goes on
+    pub interrupted: BTreeSet<usize>,
+    /// players that are gone for good, with how long that is still news
+    pub disconnected: BTreeMap<usize, Timer>,
+}
 
 /// Handle of the player the camera follows once the local player has died.
 /// Only the local player picks and sees this, so it is not part of the rollback state.

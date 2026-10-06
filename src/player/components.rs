@@ -201,6 +201,13 @@ pub struct PlayerSpeedBoostText;
 #[derive(Component)]
 pub struct SynchronizingText;
 
+/// Tells the player about connection trouble of other players.
+#[derive(Component)]
+pub struct ConnectionNoticeUI;
+
+#[derive(Component)]
+pub struct ConnectionNoticeText;
+
 /// Shown to a dead player, tells them who they are watching.
 #[derive(Component)]
 pub struct SpectateUI;
