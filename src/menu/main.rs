@@ -20,6 +20,8 @@ pub enum MainMenuBtn {
     OnlineMatch,
     LocalMatch,
     Options,
+    // not shown on the web build
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     Quit,
 }
 
@@ -39,13 +41,12 @@ pub fn setup_ui(
     commands.spawn((Camera2d, Msaa::Off)).insert(MainMenuUI);
 
     // root node
-    commands.spawn((
-        ui::screen(),
-        MainMenuUI,
-        children![
-            ui::title(font, "Turtle Time!"),
+    commands
+        .spawn((ui::screen(), MainMenuUI))
+        .with_children(|parent| {
+            parent.spawn(ui::title(font, "Turtle Time!"));
             // logo
-            (
+            parent.spawn((
                 ImageNode::new(image_assets.texture_turtle_cheeks2.clone()),
                 Node {
                     width: Val::Px(128.0),
@@ -53,26 +54,27 @@ pub fn setup_ui(
                     margin: UiRect::bottom(Val::Px(8.)),
                     ..Default::default()
                 },
-            ),
-            (
+            ));
+            parent.spawn((
                 ui::button(font, "Online match", MenuButton::Primary),
                 MainMenuBtn::OnlineMatch,
-            ),
-            (
+            ));
+            parent.spawn((
                 ui::button(font, "Local match", MenuButton::Secondary),
                 MainMenuBtn::LocalMatch,
-            ),
-            (
+            ));
+            parent.spawn((
                 ui::button(font, "Controls", MenuButton::Secondary),
                 MainMenuBtn::Options,
-            ),
-            (
+            ));
+            // there is nothing to quit to in a browser, the player just closes the tab
+            #[cfg(not(target_arch = "wasm32"))]
+            parent.spawn((
                 ui::button(font, "Quit", MenuButton::Secondary),
                 MainMenuBtn::Quit,
-            ),
-            ui::hint(font, format!("Version {VERSION}")),
-        ],
-    ));
+            ));
+            parent.spawn(ui::hint(font, format!("Version {VERSION}")));
+        });
 }
 
 pub fn btn_listeners(
