@@ -16,6 +16,8 @@ env:
   #   if you use special characters, take a look at the 'Make paths relative' step in the 'build-web' job
   GAME_EXECUTABLE_NAME: turtle_time
   CARGO_TERM_COLOR: always
+  # the runner doesn't have enough memory for fat lto, the final link gets killed
+  CARGO_PROFILE_RELEASE_LTO: thin
 
 # The macOS and Windows builds of the GitHub release flow are missing here,
 # they need runners with the labels macos-latest and windows-latest.
