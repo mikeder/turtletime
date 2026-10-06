@@ -3,13 +3,13 @@ use std::time::Duration;
 use super::checksum::Checksum;
 use super::components::{
     Edible, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
-    FireballTimer, Player, PlayerFireballText, PlayerHealth, PlayerHealthBar, PlayerHealthText,
-    PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText,
-    RoundComponent, SynchronizingText, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE,
-    FIREBALL_RADIUS, LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX,
-    PLAYER_HEALTH_MID, PLAYER_SPEED_BOOST, PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX,
-    PLAYER_SPEED_START, POOP_DAMAGE, POOP_ENTITIES_MAX, POOP_SIZE, STRAWBERRY_AMMO_COUNT,
-    STRAWBERRY_SIZE,
+    FireballTimer, Player, PlayerFireballText, PlayerHealth, PlayerHealthBar, PlayerHealthBarPart,
+    PlayerHealthText, PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost,
+    PlayerSpeedBoostText, RoundComponent, SynchronizingText, CHILI_PEPPER_AMMO_COUNT,
+    CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS, LETTUCE_HEALTH_GAIN, LETTUCE_SIZE,
+    PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID, PLAYER_SPEED_BOOST,
+    PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE, POOP_ENTITIES_MAX,
+    POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -1083,6 +1083,7 @@ pub fn add_player_health_bars(
                     ..default()
                 },
                 Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.),
+                PlayerHealthBarPart,
             ));
             cb.spawn((
                 // red overlay
@@ -1092,6 +1093,7 @@ pub fn add_player_health_bars(
                     ..default()
                 },
                 Transform::from_xyz(0., HEALTH_BAR_Y_OFFSET, 0.2),
+                PlayerHealthBarPart,
             ))
             // insert component used to track player health in update system
             .insert(PlayerHealthBar { health_entity });
@@ -1117,5 +1119,26 @@ pub fn update_health_bars(
 
         transform.scale = vec3(health_percent as f32, 1.0, 1.0);
         transform.translation = vec3(-x_offset, HEALTH_BAR_Y_OFFSET, 0.2)
+    }
+}
+
+/// Dead players have no health left to show. This follows the player instead of
+/// being done once on death, a rollback can bring a player back to life.
+pub fn hide_dead_health_bars(
+    mut parts: Query<(&ChildOf, &mut Visibility), With<PlayerHealthBarPart>>,
+    players: Query<&Player>,
+) {
+    for (child_of, mut visibility) in parts.iter_mut() {
+        let Ok(player) = players.get(child_of.parent()) else {
+            continue;
+        };
+        let wanted = if player.active {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+        if *visibility != wanted {
+            *visibility = wanted;
+        }
     }
 }

@@ -185,6 +185,10 @@ impl Default for PlayerHealthBar {
     }
 }
 
+/// One of the sprites a health bar is made of, a child of its player.
+#[derive(Component)]
+pub struct PlayerHealthBarPart;
+
 #[derive(Component)]
 pub struct PlayerHealthText;
 
