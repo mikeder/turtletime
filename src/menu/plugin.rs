@@ -1,4 +1,4 @@
-use crate::menu::{connect, main, online, options, ui, win};
+use crate::menu::{connect, lobby, main, online, options, quick, ui, win};
 use crate::AppState;
 use bevy::prelude::*;
 
@@ -25,17 +25,42 @@ impl Plugin for MenuPlugin {
             .add_systems(
                 Update,
                 (
-                    online::update_focus,
-                    online::update_text_input,
+                    online::update_name,
                     online::update_name_display,
-                    online::update_lobby_code_display,
-                    online::update_lobby_btn,
                     online::btn_listeners,
-                    online::update_player_count_display,
                 )
                     .run_if(in_state(AppState::MenuOnline)),
             )
             .add_systems(OnExit(AppState::MenuOnline), online::cleanup_ui)
+            // quick match menu
+            .add_systems(OnEnter(AppState::MenuQuick), quick::setup_ui)
+            .add_systems(
+                Update,
+                quick::btn_listeners.run_if(in_state(AppState::MenuQuick)),
+            )
+            .add_systems(OnExit(AppState::MenuQuick), quick::cleanup_ui)
+            // lobby menu
+            .add_systems(OnEnter(AppState::MenuLobby), lobby::setup_ui)
+            .add_systems(
+                Update,
+                (
+                    lobby::update_lobby_id,
+                    lobby::update_lobby_code_display,
+                    lobby::update_lobby_btn,
+                    lobby::btn_listeners,
+                )
+                    .run_if(in_state(AppState::MenuLobby)),
+            )
+            .add_systems(OnExit(AppState::MenuLobby), lobby::cleanup_ui)
+            // the player count is picked on both menus that start a match
+            .add_systems(
+                Update,
+                (
+                    online::player_count_btns,
+                    online::update_player_count_display,
+                )
+                    .run_if(in_state(AppState::MenuQuick).or(in_state(AppState::MenuLobby))),
+            )
             // connect menu
             .add_systems(
                 OnEnter(AppState::MenuConnect),

@@ -77,6 +77,17 @@ pub fn row() -> impl Bundle {
     }
 }
 
+/// A label stacked on top of the thing it describes, closer together than
+/// the other things on the screen.
+pub fn column() -> impl Bundle {
+    Node {
+        flex_direction: FlexDirection::Column,
+        align_items: AlignItems::Center,
+        row_gap: Val::Px(6.),
+        ..Default::default()
+    }
+}
+
 /// Empty space to set groups of things apart.
 pub fn spacer(height: f32) -> impl Bundle {
     Node {

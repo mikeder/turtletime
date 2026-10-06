@@ -56,6 +56,10 @@ pub enum AppState {
     MenuConnect,
     // Menu for making online rounds
     MenuOnline,
+    // Menu for finding an online round with anyone
+    MenuQuick,
+    // Menu for opening or joining a lobby with a code
+    MenuLobby,
     // Menu for setting options
     MenuOptions,
     // Game logic for online round is executed

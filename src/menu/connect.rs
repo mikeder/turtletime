@@ -345,13 +345,13 @@ pub fn setup_ui(
             // lobby code display, so the player can pass it on while waiting
             if let Some(lobby_code) = &connect_data.lobby_code {
                 parent.spawn((
-                    ui::row(),
+                    ui::column(),
                     children![
                         ui::body(font, "Lobby code"),
                         ui::text(font, lobby_code.clone(), ui::HEADING_SIZE, ui::LETTUCE),
+                        ui::hint(font, "Friends join by typing this code"),
                     ],
                 ));
-                parent.spawn(ui::hint(font, "Friends join by typing this code"));
             }
             parent.spawn(ui::spacer(10.));
             // back button
