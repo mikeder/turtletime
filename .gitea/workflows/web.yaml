@@ -1,0 +1,83 @@
+name: web
+
+# Builds the web version of the game, attaches it to a release as a zip
+# and publishes a docker image that serves it.
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version - in the form of 1.2.3'
+        required: true
+        type: string
+
+env:
+  # heads-up: this value is used as a pattern in an sed command as a workaround for a trunk issue
+  #   if you use special characters, take a look at the 'Make paths relative' step
+  GAME_EXECUTABLE_NAME: turtle_time
+  CARGO_TERM_COLOR: always
+  # The runner is small. Fat lto runs out of memory at the final link, and
+  # without lto and with parallel codegen the build is a lot faster.
+  CARGO_PROFILE_RELEASE_LTO: "off"
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 16
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get version
+        run: |
+          VERSION="${{ inputs.version }}"
+          echo "VERSION=${VERSION:-${GITHUB_REF#refs/tags/}}" >> "$GITHUB_ENV"
+          echo "IMAGE=${GITHUB_SERVER_URL#https://}/${GITHUB_REPOSITORY}" >> "$GITHUB_ENV"
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install trunk
+        uses: jetli/trunk-action@v0.5.1
+        with:
+          version: latest
+      - name: Build Release
+        run: |
+          trunk build --release
+      - name: Optimize Wasm
+        uses: NiklasEi/wasm-opt-action@v2
+        with:
+          file: dist/*.wasm
+        # Trunk cannot import assets from relative paths (see e.g. https://github.com/thedodd/trunk/issues/395)
+        # We don't know on which base path the game gets served, so we need to rewrite all links to be relative
+      - name: Make paths relative
+        run: |
+          sed -i 's/\/index/.\/index/g' dist/index.html
+          sed -i 's/\/${{ env.GAME_EXECUTABLE_NAME }}/.\/${{ env.GAME_EXECUTABLE_NAME }}/g' dist/index.html
+      - name: Zip release
+        run: |
+          cd dist && zip -r ../${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_web.zip .
+      - name: Upload release
+        uses: https://gitea.com/actions/gitea-release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
+          files: ${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_web.zip
+      - name: Build docker image
+        run: |
+          docker build -f build/web/Dockerfile -t "$IMAGE:$VERSION" -t "$IMAGE:latest" .
+      # The token actions provide can't push to the container registry. Add a personal
+      # access token with the write:package scope as the secret REGISTRY_TOKEN to publish.
+      - name: Publish docker image
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          if [ -z "$REGISTRY_TOKEN" ]; then
+            echo "::warning::REGISTRY_TOKEN secret is not set, the docker image was built but not published"
+            exit 0
+          fi
+          echo "$REGISTRY_TOKEN" | docker login "${IMAGE%%/*}" -u "${{ github.repository_owner }}" --password-stdin
+          docker push "$IMAGE:$VERSION"
+          docker push "$IMAGE:latest"
