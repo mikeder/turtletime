@@ -10,7 +10,7 @@ pub struct MenuPlugin;
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app
+        app.init_resource::<online::PlayerName>()
             // hover, press and disabled looks are the same for every menu
             .add_systems(Update, ui::update_buttons)
             // main menu
@@ -25,7 +25,9 @@ impl Plugin for MenuPlugin {
             .add_systems(
                 Update,
                 (
-                    online::update_lobby_id,
+                    online::update_focus,
+                    online::update_text_input,
+                    online::update_name_display,
                     online::update_lobby_code_display,
                     online::update_lobby_btn,
                     online::btn_listeners,

@@ -197,6 +197,25 @@ pub fn update_buttons(
     }
 }
 
+/// A box that shows a line of typed text and grows with it.
+pub fn input_field(font: &Handle<Font>) -> impl Bundle {
+    (
+        Node {
+            min_width: Val::Px(BUTTON_WIDTH),
+            height: Val::Px(52.),
+            padding: UiRect::horizontal(Val::Px(16.)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            border: UiRect::all(Val::Px(3.)),
+            border_radius: BorderRadius::all(Val::Px(8.)),
+            ..Default::default()
+        },
+        BackgroundColor(MOSS),
+        BorderColor::all(MOSS_EDGE),
+        children![text(font, "", BUTTON_SIZE, LETTUCE)],
+    )
+}
+
 /// A box that shows a single typed character.
 pub fn input_slot(font: &Handle<Font>) -> impl Bundle {
     (

@@ -5,10 +5,11 @@ use super::components::{
     Edible, EdibleSpawnTimer, Fireball, FireballAmmo, FireballMovement, FireballReady,
     FireballTimer, Player, PlayerFireballText, PlayerHealth, PlayerHealthBar, PlayerHealthText,
     PlayerPoop, PlayerPoopTimer, PlayerSpeed, PlayerSpeedBoost, PlayerSpeedBoostText,
-    RoundComponent, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE, FIREBALL_RADIUS,
-    LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX, PLAYER_HEALTH_MID,
-    PLAYER_SPEED_BOOST, PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX, PLAYER_SPEED_START, POOP_DAMAGE,
-    POOP_ENTITIES_MAX, POOP_SIZE, STRAWBERRY_AMMO_COUNT, STRAWBERRY_SIZE,
+    RoundComponent, SynchronizingText, CHILI_PEPPER_AMMO_COUNT, CHILI_PEPPER_SIZE, FIREBALL_DAMAGE,
+    FIREBALL_RADIUS, LETTUCE_HEALTH_GAIN, LETTUCE_SIZE, PLAYER_HEALTH_LOW, PLAYER_HEALTH_MAX,
+    PLAYER_HEALTH_MID, PLAYER_SPEED_BOOST, PLAYER_SPEED_BOOST_MAX, PLAYER_SPEED_MAX,
+    PLAYER_SPEED_START, POOP_DAMAGE, POOP_ENTITIES_MAX, POOP_SIZE, STRAWBERRY_AMMO_COUNT,
+    STRAWBERRY_SIZE,
 };
 use super::input::{
     GGRSConfig, PlayerControls, INPUT_DOWN, INPUT_EXIT, INPUT_FIRE, INPUT_LEFT, INPUT_RIGHT,
@@ -20,7 +21,7 @@ use crate::audio::{FadedLoopSound, RollbackSound, RollbackSoundBundle};
 use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::{AudioAssets, FontAssets, TextureAssets};
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
-use crate::menu::connect::LocalHandle;
+use crate::menu::connect::{player_label, LocalHandle, PlayerNames};
 use crate::menu::online::PlayerCount;
 use crate::menu::ui;
 use crate::menu::win::MatchData;
@@ -32,14 +33,16 @@ use bevy::color::palettes::css::{RED, TOMATO};
 use bevy::math::vec3;
 use bevy::prelude::*;
 use bevy_ggrs::Rollback;
+use bevy_ggrs::Session;
 use bevy_ggrs::{AddRollbackCommandExtension, PlayerInputs, RollbackFrameCount};
-use ggrs::InputStatus;
+use ggrs::{InputStatus, SessionState};
 use rand::RngExt;
 
 pub fn create_ui(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
     player_handle: Option<Res<LocalHandle>>,
+    player_names: Option<Res<PlayerNames>>,
 ) {
     trace!("create_ui");
 
@@ -48,8 +51,7 @@ pub fn create_ui(
         None => return, // Session hasn't started yet
     };
 
-    // handles start at zero, people count from one
-    let player_name = format!("Player {}", player_handle + 1);
+    let player_name = player_label(player_names.as_deref(), player_handle);
     let font = &font_assets.fira_sans;
 
     // root node, a shaded panel so the text stays readable on top of the map
@@ -85,6 +87,53 @@ pub fn create_ui(
         ))
         .insert(RoundComponent)
         .insert(Name::new("PlayerUI"));
+
+    // shown while the session waits for every player, so it is clear why nothing moves yet
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.),
+                right: Val::Px(0.),
+                top: Val::Percent(30.),
+                justify_content: JustifyContent::Center,
+                ..Default::default()
+            },
+            Visibility::Hidden,
+            SynchronizingText,
+            children![(
+                Node {
+                    padding: UiRect::axes(Val::Px(24.), Val::Px(12.)),
+                    border_radius: BorderRadius::all(Val::Px(8.)),
+                    ..Default::default()
+                },
+                BackgroundColor(ui::SHADE),
+                children![ui::heading(font, "Synchronizing...")],
+            )],
+        ))
+        .insert(RoundComponent)
+        .insert(Name::new("SynchronizingUI"));
+}
+
+pub fn update_synchronizing_text(
+    session: Option<Res<Session<GGRSConfig>>>,
+    mut query: Query<&mut Visibility, With<SynchronizingText>>,
+) {
+    // only online sessions have to synchronize with other players before they run
+    let synchronizing = match session.as_deref() {
+        Some(Session::P2P(s)) => s.current_state() == SessionState::Synchronizing,
+        _ => false,
+    };
+    let wanted = if synchronizing {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
+    for mut visibility in query.iter_mut() {
+        if *visibility != wanted {
+            *visibility = wanted;
+        }
+    }
 }
 
 pub fn update_player_health_text(
@@ -983,6 +1032,7 @@ pub fn check_win_state(
     mut app_state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<NextState<GameState>>,
     player_handle: Option<Res<LocalHandle>>,
+    player_names: Option<Res<PlayerNames>>,
     player_query: Query<(Entity, &Player), Without<Fireball>>,
 ) {
     let local_handle = match player_handle {
@@ -1000,15 +1050,11 @@ pub fn check_win_state(
         }
     }
     if remaning_active.len() == 1 {
-        if remaning_active[0].handle == local_handle {
-            commands.insert_resource(MatchData {
-                result: format!("You Win!"),
-            })
-        } else {
-            commands.insert_resource(MatchData {
-                result: format!("You Lost!"),
-            })
-        }
+        let winner = remaning_active[0].handle;
+        commands.insert_resource(MatchData {
+            winner: player_label(player_names.as_deref(), winner),
+            won: winner == local_handle,
+        });
         app_state.set(AppState::Win);
         game_state.set(GameState::Paused);
     }

@@ -194,6 +194,9 @@ pub struct PlayerFireballText;
 #[derive(Component)]
 pub struct PlayerSpeedBoostText;
 
+#[derive(Component)]
+pub struct SynchronizingText;
+
 impl Default for Player {
     fn default() -> Self {
         Player {

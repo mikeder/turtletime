@@ -15,7 +15,10 @@ pub enum MenuWinBtn {
 
 #[derive(Resource)]
 pub struct MatchData {
-    pub result: String,
+    /// name of the player that won the round
+    pub winner: String,
+    /// whether that is the local player
+    pub won: bool,
 }
 
 pub fn setup_ui(
@@ -33,8 +36,13 @@ pub fn setup_ui(
     commands
         .spawn((ui::screen(), WinUI))
         .with_children(|parent| {
-            // match result string
-            parent.spawn(ui::title(font, match_data.result.clone()));
+            // match result
+            parent.spawn(ui::title(font, format!("{} wins!", match_data.winner)));
+            parent.spawn(if match_data.won {
+                ui::text(font, "You Win!", ui::HEADING_SIZE, ui::LETTUCE)
+            } else {
+                ui::text(font, "You Lost!", ui::HEADING_SIZE, ui::CHILI)
+            });
             parent.spawn(ui::spacer(10.));
             // a rematch goes back to the lobby of an online match, local matches have none
             if connect_data.is_some() {

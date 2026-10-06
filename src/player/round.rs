@@ -3,7 +3,7 @@ use bevy_ggrs::{GgrsTime, Rollback, Session};
 use bevy_matchbox::MatchboxSocket;
 
 use crate::{
-    menu::connect::LocalHandle,
+    menu::connect::{LocalHandle, PlayerNames},
     player::{
         components::EdibleSpawnTimer,
         resources::{HealthBarsAdded, PlayersReady},
@@ -83,6 +83,9 @@ pub fn cleanup_session(mut commands: Commands, query: Query<Entity, With<Rollbac
 
     // cleanup local handle, local player could get a different handle next round
     commands.remove_resource::<LocalHandle>();
+
+    // names belong to the handles of this session
+    commands.remove_resource::<PlayerNames>();
 
     // finally remove old session
     commands.remove_resource::<Session<GGRSConfig>>();

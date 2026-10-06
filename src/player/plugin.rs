@@ -44,6 +44,7 @@ impl Plugin for PlayerPlugin {
                     update_player_health_text,
                     update_player_fireball_text,
                     update_player_speed_boost_text,
+                    update_synchronizing_text,
                 )
                     .distributive_run_if(in_state(GameState::Playing)),
             )
