@@ -1,11 +1,14 @@
-<!DOCTYPE html><html lang="en"><head>
-    <meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
     <title>Turtle Time!</title>
     
     
     
     <link rel="icon" href="icon.ico">
-    <style type="text/css">body, html {
+    <style>body, html {
     height: 100%;
 }
 
@@ -34,9 +37,7 @@ body {
     height: 600px;
 }
 </style>
-
-<link rel="preload" href="/turtletime/turtle_time-a485140a1378975d_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
-<link rel="modulepreload" href="/turtletime/turtle_time-a485140a1378975d.js"></head>
+<link rel="modulepreload" href="turtletime/turtle_time-f9e2485a98807d20.js" crossorigin="anonymous" integrity="sha384-SIwOAh9PkEnMD12zS9v6xVYBD69vAemMV4NRMxVzDv2XuSVjhxIqDyxzO9EVMUHv"><link rel="preload" href="turtletime/turtle_time-f9e2485a98807d20_bg.wasm" crossorigin="anonymous" integrity="sha384-0Qf6KHYeDIBHGE5dNml5EkDNl6D6r3i+fk4XNAT3N3yGbrddwR4f8j9DPdhPBGvv" as="fetch" type="application/wasm"></head>
 
 <body>
     <script>// Insert hack to make sound autoplay on Chrome as soon as the user interacts with the tab:
@@ -108,5 +109,16 @@ body {
         </canvas>
     </div>
 
+<script type="module">
+import init, * as bindings from 'turtletime/turtle_time-f9e2485a98807d20.js';
+const wasm = await init({ module_or_path: 'turtletime/turtle_time-f9e2485a98807d20_bg.wasm' });
 
-<script type="module">import init from '/turtletime/turtle_time-a485140a1378975d.js';init('/turtletime/turtle_time-a485140a1378975d_bg.wasm');</script></body></html>
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
+
+</html>
