@@ -1,0 +1,19 @@
+name: probe
+on: push
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          uname -a; cat /etc/os-release | head -4; nproc; free -g | head -2; df -h / | tail -1
+          echo "runner: $RUNNER_OS $RUNNER_ARCH name=$RUNNER_NAME"; echo "server=$GITHUB_SERVER_URL api=$GITHUB_API_URL actions_cache=${ACTIONS_CACHE_URL:-none}"
+          for t in git curl node cargo rustup docker sudo apt-get zip python3 gcc pkg-config; do printf "%s: " $t; command -v $t || echo MISSING; done
+          id
+  windows:
+    runs-on: windows-latest
+    steps:
+      - run: echo windows
+  macos:
+    runs-on: macos-latest
+    steps:
+      - run: uname -a
