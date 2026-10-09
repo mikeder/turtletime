@@ -46,6 +46,18 @@ pub struct Connections {
 #[derive(Resource, Default)]
 pub struct Spectating(pub Option<usize>);
 
+/// Who won the previous round, they wear the party hat in the next one.
+#[derive(Resource, Default, Clone, Copy, PartialEq, Eq)]
+pub enum PreviousWinner {
+    #[default]
+    None,
+    /// handle of the winner of a local round, those are the same every round
+    Handle(usize),
+    /// the local player won an online round. Handles change between online rounds,
+    /// so every player tells the lobby on their own whether they won
+    Me,
+}
+
 #[derive(Debug, Default, Reflect, Resource)]
 #[reflect(Resource)]
 pub struct HealthBarsAdded;

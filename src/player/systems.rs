@@ -17,14 +17,14 @@ use super::input::{
     INPUT_SPRINT, INPUT_UP,
 };
 use super::resources::{
-    AgreedRandom, Connections, HealthBarsAdded, Spectating, DISCONNECT_NOTICE_SECS,
+    AgreedRandom, Connections, HealthBarsAdded, PreviousWinner, Spectating, DISCONNECT_NOTICE_SECS,
 };
 
 use crate::audio::{FadedLoopSound, RollbackSound, RollbackSoundBundle};
 use crate::graphics::{CharacterSheet, FrameAnimation};
 use crate::loading::{AudioAssets, FontAssets, TextureAssets};
 use crate::map::tilemap::{EncounterSpawner, PlayerSpawn, TileCollider};
-use crate::menu::connect::{player_label, LocalHandle, PlayerNames};
+use crate::menu::connect::{player_label, LocalHandle, PlayerCharacters, PlayerNames};
 use crate::menu::online::PlayerCount;
 use crate::menu::ui;
 use crate::menu::win::MatchData;
@@ -464,6 +464,7 @@ pub fn spawn_players(
     player_count: Res<PlayerCount>,
     spawn_query: Query<&mut PlayerSpawn>,
     local_handle: Option<Res<LocalHandle>>,
+    player_characters: Option<Res<PlayerCharacters>>,
 ) {
     trace!("spawn_players");
 
@@ -475,21 +476,24 @@ pub fn spawn_players(
     // find all the spawn points on the map
     let spawns: Vec<&PlayerSpawn> = spawn_query.iter().collect();
 
-    let mut sprite = Sprite::from_atlas_image(
-        characters.turtle_image.clone(),
-        TextureAtlas {
-            layout: characters.turtle_layout.clone(),
-            index: characters.turtle_frames[0],
-        },
-    );
-    sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
-
     for handle in 0..player_count.0 {
         let name = format!("Player {}", handle);
+        let character = player_characters
+            .as_deref()
+            .and_then(|characters| characters.0.get(handle).copied())
+            .unwrap_or_default();
+        let mut sprite = Sprite::from_atlas_image(
+            characters.turtle_image(character),
+            TextureAtlas {
+                layout: characters.turtle_layout.clone(),
+                index: characters.turtle_frames[0],
+            },
+        );
+        sprite.custom_size = Some(Vec2::splat(TILE_SIZE * 2.));
         let player_id = commands
             .spawn((
                 Name::new(name),
-                sprite.clone(),
+                sprite,
                 Transform {
                     translation: Vec3::new(spawns[handle].pos.x, spawns[handle].pos.y, 1.),
                     ..Default::default()
@@ -498,6 +502,7 @@ pub fn spawn_players(
                     timer: Timer::from_seconds(0.2, TimerMode::Repeating),
                     frames: characters.turtle_frames.to_vec(),
                     current_frame: 0,
+                    playing: false,
                 },
                 Player {
                     handle,
@@ -535,6 +540,17 @@ pub fn set_walking_sound(mut query: Query<(&mut FadedLoopSound, &PlayerControls)
             sound.should_play = false
         } else {
             sound.should_play = true
+        }
+    }
+}
+
+/// Turtles only move their legs while they walk. The animation is not part of the
+/// rollback state, so this follows the controls instead of being set in a rollback system.
+pub fn animate_walking_players(mut query: Query<(&Player, &PlayerControls, &mut FrameAnimation)>) {
+    for (player, controls, mut animation) in query.iter_mut() {
+        let walking = player.active && controls.dir != Vec2::ZERO;
+        if animation.playing != walking {
+            animation.playing = walking;
         }
     }
 }
@@ -1256,6 +1272,8 @@ pub fn check_win_state(
     mut commands: Commands,
     mut app_state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<NextState<GameState>>,
+    state: Res<State<AppState>>,
+    mut previous_winner: ResMut<PreviousWinner>,
     player_handle: Option<Res<LocalHandle>>,
     player_names: Option<Res<PlayerNames>>,
     connections: Res<Connections>,
@@ -1277,6 +1295,13 @@ pub fn check_win_state(
     }
     if remaning_active.len() == 1 {
         let winner = remaning_active[0].handle;
+        *previous_winner = if *state.get() != AppState::RoundOnline {
+            PreviousWinner::Handle(winner)
+        } else if winner == local_handle {
+            PreviousWinner::Me
+        } else {
+            PreviousWinner::None
+        };
         commands.insert_resource(MatchData {
             winner: player_label(player_names.as_deref(), winner),
             won: winner == local_handle,

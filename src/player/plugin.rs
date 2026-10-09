@@ -1,6 +1,6 @@
 use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
-use super::resources::{Connections, HealthBarsAdded, PlayersReady, Spectating};
+use super::resources::{Connections, HealthBarsAdded, PlayersReady, PreviousWinner, Spectating};
 use super::round::{
     cleanup_round, cleanup_session, disconnect_remote_players, remove_expired, setup_round,
 };
@@ -18,6 +18,7 @@ impl Plugin for PlayerPlugin {
         app.init_resource::<EdibleSpawnTimer>()
             .init_resource::<Spectating>()
             .init_resource::<Connections>()
+            .init_resource::<PreviousWinner>()
             // round setup
             .add_systems(
                 OnEnter(GameState::Playing),
@@ -32,7 +33,10 @@ impl Plugin for PlayerPlugin {
                 (update_health_bars, hide_dead_health_bars)
                     .run_if(resource_exists::<HealthBarsAdded>),
             )
-            .add_systems(Update, camera_follow.run_if(in_state(GameState::Playing)))
+            .add_systems(
+                Update,
+                (camera_follow, animate_walking_players).run_if(in_state(GameState::Playing)),
+            )
             // round cleanup
             .add_systems(OnExit(AppState::RoundOnline), disconnect_remote_players)
             .add_systems(

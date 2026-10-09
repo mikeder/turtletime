@@ -1,10 +1,12 @@
-use super::connect::{ConnectData, LocalHandle};
+use super::character::SelectedCharacter;
+use super::connect::{ConnectData, LocalHandle, PlayerCharacters};
 use super::online::PlayerCount;
 use super::plugin::VERSION;
 use super::ui::{self, MenuButton};
-use crate::loading::{FontAssets, TextureAssets};
+use crate::graphics::{Character, CharacterSheet};
+use crate::loading::FontAssets;
 use crate::player::input::GGRSConfig;
-use crate::player::resources::AgreedRandom;
+use crate::player::resources::{AgreedRandom, PreviousWinner};
 use crate::{AppState, GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION};
 use bevy::asset::uuid::Uuid;
 use bevy::{app::AppExit, prelude::*};
@@ -19,6 +21,7 @@ pub struct MainMenuUI;
 pub enum MainMenuBtn {
     OnlineMatch,
     LocalMatch,
+    Character,
     Options,
     // not shown on the web build
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
@@ -27,13 +30,19 @@ pub enum MainMenuBtn {
 
 pub fn setup_ui(
     mut commands: Commands,
-    image_assets: Res<TextureAssets>,
+    characters: Res<CharacterSheet>,
+    selected: Res<SelectedCharacter>,
     font_assets: Res<FontAssets>,
     player_count: Option<Res<PlayerCount>>,
+    mut previous_winner: ResMut<PreviousWinner>,
 ) {
     // default player count
     if player_count.is_none() {
         commands.insert_resource(PlayerCount(2));
+    }
+    // the winner of an online round only keeps the party hat for a rematch
+    if *previous_winner == PreviousWinner::Me {
+        *previous_winner = PreviousWinner::None;
     }
     let font = &font_assets.fira_sans;
 
@@ -47,7 +56,13 @@ pub fn setup_ui(
             parent.spawn(ui::title(font, "Turtle Time!"));
             // logo
             parent.spawn((
-                ImageNode::new(image_assets.texture_turtle_cheeks2.clone()),
+                ImageNode::from_atlas_image(
+                    characters.turtle_image(selected.0),
+                    TextureAtlas {
+                        layout: characters.turtle_layout.clone(),
+                        index: characters.turtle_frames[0],
+                    },
+                ),
                 Node {
                     width: Val::Px(128.0),
                     height: Val::Px(128.0),
@@ -62,6 +77,10 @@ pub fn setup_ui(
             parent.spawn((
                 ui::button(font, "Local match", MenuButton::Secondary),
                 MainMenuBtn::LocalMatch,
+            ));
+            parent.spawn((
+                ui::button(font, "Character", MenuButton::Secondary),
+                MainMenuBtn::Character,
             ));
             parent.spawn((
                 ui::button(font, "Controls", MenuButton::Secondary),
@@ -83,6 +102,8 @@ pub fn btn_listeners(
     mut app_state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<NextState<GameState>>,
     player_count: Res<PlayerCount>,
+    selected: Res<SelectedCharacter>,
+    previous_winner: Res<PreviousWinner>,
     mut interaction_query: Query<(&Interaction, &MainMenuBtn), Changed<Interaction>>,
 ) {
     for (interaction, btn) in interaction_query.iter_mut() {
@@ -96,8 +117,22 @@ pub fn btn_listeners(
                     commands.remove_resource::<ConnectData>();
 
                     create_synctest_session(&mut commands, player_count.0);
+                    // every turtle of a local round is played by the local player
+                    let characters = (0..player_count.0)
+                        .map(|handle| {
+                            if *previous_winner == PreviousWinner::Handle(handle) {
+                                Character::PartyHat
+                            } else {
+                                selected.0
+                            }
+                        })
+                        .collect();
+                    commands.insert_resource(PlayerCharacters(characters));
                     app_state.set(AppState::RoundLocal);
                     game_state.set(GameState::Playing);
+                }
+                MainMenuBtn::Character => {
+                    app_state.set(AppState::MenuCharacter);
                 }
                 MainMenuBtn::Options => {
                     app_state.set(AppState::MenuOptions);

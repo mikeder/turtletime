@@ -65,6 +65,8 @@ pub enum AppState {
     MenuLobby,
     // Menu for setting options
     MenuOptions,
+    // Menu for picking the turtle to play as
+    MenuCharacter,
     // Game logic for online round is executed
     RoundOnline,
     // Game logic fo local round is executed

@@ -118,6 +118,8 @@ fn local_round_app() -> App {
         })
         .insert_resource(CharacterSheet {
             turtle_image: default(),
+            turtle_hat_image: default(),
+            turtle_party_hat_image: default(),
             turtle_layout: default(),
             turtle_frames: [0, 1, 2, 3],
             goose_image: default(),

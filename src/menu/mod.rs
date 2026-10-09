@@ -1,3 +1,4 @@
+pub mod character;
 pub mod connect;
 pub mod lobby;
 pub mod main;

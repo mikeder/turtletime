@@ -1,8 +1,10 @@
+use super::character::SelectedCharacter;
 use super::online::{clean_name, PlayerCount, PlayerName};
 use super::ui::{self, MenuButton};
+use crate::graphics::Character;
 use crate::loading::FontAssets;
 use crate::player::input::GGRSConfig;
-use crate::player::resources::AgreedRandom;
+use crate::player::resources::{AgreedRandom, PreviousWinner};
 use crate::{AppState, GameState, FPS, INPUT_DELAY, MATCHBOX_ADDR, MAX_PREDICTION};
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
@@ -30,8 +32,33 @@ pub struct LobbyPlayersText;
 
 /// ggrs sends the inputs of the round over this channel
 const GAME_CHANNEL: usize = 0;
-/// players tell each other their name over this channel while in the lobby
+/// players tell each other their turtle and name over this channel while in the lobby
 const NAME_CHANNEL: usize = 1;
+
+/// What a player tells the others in the lobby: the turtle they play as, followed by their name.
+fn lobby_packet(character: Character, name: &str) -> Box<[u8]> {
+    let mut packet = vec![character.to_byte()];
+    packet.extend_from_slice(name.as_bytes());
+    packet.into()
+}
+
+fn read_lobby_packet(packet: &[u8]) -> (Character, String) {
+    // builds without a character select only send their name. Names can't hold
+    // control characters, so a first byte that is one has to be the turtle
+    let (character, name) = match packet.split_first() {
+        Some((byte, name)) if byte.is_ascii_control() => (Character::from_byte(*byte), name),
+        _ => (Character::default(), packet),
+    };
+    (character, clean_name(&String::from_utf8_lossy(name)))
+}
+
+/// Turtles the peers in the lobby told us they play as.
+#[derive(Resource, Default)]
+pub struct LobbyCharacters(pub HashMap<PeerId, Character>);
+
+/// Turtles of the players of a round by handle.
+#[derive(Resource)]
+pub struct PlayerCharacters(pub Vec<Character>);
 
 /// Names the peers in the lobby sent us, a peer without one sends an empty name.
 #[derive(Resource, Default)]
@@ -113,6 +140,7 @@ pub fn create_matchbox_socket(mut commands: Commands, connect_data: Res<ConnectD
     // insert new socket resource for next session
     commands.insert_resource(open_socket(room_url));
     commands.insert_resource(LobbyNames::default());
+    commands.insert_resource(LobbyCharacters::default());
     commands.insert_resource(LobbyTimeout::default());
     commands.insert_resource(LobbyCountdown::default());
     // commands.remove_resource::<ConnectData>();
@@ -129,13 +157,23 @@ pub fn lobby_system(
     time: Res<Time>,
     player_count: Res<PlayerCount>,
     player_name: Res<PlayerName>,
+    selected: Res<SelectedCharacter>,
+    previous_winner: Res<PreviousWinner>,
     mut lobby_names: ResMut<LobbyNames>,
+    mut lobby_characters: ResMut<LobbyCharacters>,
     mut query: Query<(&mut Text, &mut TextColor), With<LobbyText>>,
     mut players_query: Query<&mut Text, (With<LobbyPlayersText>, Without<LobbyText>)>,
 ) {
     // the socket is closed when the lobby fails, the only way out is back to the menu
     let Some(mut socket) = socket else {
         return;
+    };
+
+    // whoever won the previous round shows up in the party hat
+    let character = if *previous_winner == PreviousWinner::Me {
+        Character::PartyHat
+    } else {
+        selected.0
     };
 
     // regularly call update_peers to update the list of connected peers
@@ -158,7 +196,8 @@ pub fn lobby_system(
                 info!("peer {peer:?} connected");
                 // tell the new peer who we are
                 if let Ok(channel) = socket.get_channel_mut(NAME_CHANNEL) {
-                    if let Err(e) = channel.try_send(player_name.0.as_bytes().into(), *peer) {
+                    let packet = lobby_packet(character, &player_name.0);
+                    if let Err(e) = channel.try_send(packet, *peer) {
                         warn!("could not send name to {peer:?}: {:?}", e);
                     }
                 }
@@ -166,13 +205,15 @@ pub fn lobby_system(
             PeerState::Disconnected => {
                 info!("peer {peer:?} disconnected");
                 lobby_names.0.remove(peer);
+                lobby_characters.0.remove(peer);
             }
         }
     }
     if let Ok(channel) = socket.get_channel_mut(NAME_CHANNEL) {
         for (peer, packet) in channel.receive() {
-            let name = clean_name(&String::from_utf8_lossy(&packet));
+            let (character, name) = read_lobby_packet(&packet);
             lobby_names.0.insert(peer, name);
+            lobby_characters.0.insert(peer, character);
         }
     }
     if !peer_changes.is_empty() {
@@ -263,16 +304,19 @@ pub fn lobby_system(
         .with_input_delay(INPUT_DELAY);
 
     let mut names = Vec::new();
+    let mut characters = Vec::new();
     for (i, player_type) in players.into_iter().enumerate() {
         match &player_type {
             PlayerType::Local => {
                 info!("Adding local player {}", i);
                 commands.insert_resource(LocalHandle(i));
                 names.push(player_name.0.clone());
+                characters.push(character);
             }
             PlayerType::Remote(id) | PlayerType::Spectator(id) => {
                 info!("Adding remote player {}", i);
                 names.push(lobby_names.0.get(id).cloned().unwrap_or_default());
+                characters.push(lobby_characters.0.get(id).copied().unwrap_or_default());
             }
         }
         sess_build = sess_build
@@ -289,6 +333,7 @@ pub fn lobby_system(
     commands.insert_resource(Session::P2P(sess));
     commands.insert_resource(AgreedRandom::new(peers));
     commands.insert_resource(PlayerNames(names));
+    commands.insert_resource(PlayerCharacters(characters));
     app_state.set(AppState::RoundOnline);
     game_state.set(GameState::Playing);
 }
@@ -403,6 +448,9 @@ mod tests {
             .insert_resource(LobbyCountdown::default())
             .insert_resource(PlayerName::default())
             .insert_resource(LobbyNames::default())
+            .insert_resource(LobbyCharacters::default())
+            .insert_resource(SelectedCharacter::default())
+            .insert_resource(PreviousWinner::default())
             // nothing is listening here, no peer will ever connect
             .insert_resource(open_socket("ws://127.0.0.1:9/test"))
             .add_systems(Update, lobby_system);
@@ -445,6 +493,26 @@ mod tests {
         assert_eq!(player_label(Some(&names), 0), "Shelly");
         assert_eq!(player_label(Some(&names), 1), "Player 2");
         assert_eq!(player_label(None, 0), "Player 1");
+    }
+
+    #[test]
+    fn lobby_packets_carry_turtle_and_name() {
+        let packet = lobby_packet(Character::Hat, "Shelly");
+        assert_eq!(
+            read_lobby_packet(&packet),
+            (Character::Hat, "Shelly".to_owned())
+        );
+        let packet = lobby_packet(Character::PartyHat, "");
+        assert_eq!(
+            read_lobby_packet(&packet),
+            (Character::PartyHat, String::new())
+        );
+        // a packet that is just a name
+        assert_eq!(
+            read_lobby_packet(b"Shelly"),
+            (Character::Plain, "Shelly".to_owned())
+        );
+        assert_eq!(read_lobby_packet(b""), (Character::Plain, String::new()));
     }
 
     #[test]

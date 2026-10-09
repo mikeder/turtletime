@@ -49,6 +49,7 @@ pub fn spawn_geese(
                 timer: Timer::from_seconds(0.2, TimerMode::Repeating),
                 frames: characters.goose_frames.to_vec(),
                 current_frame: 0,
+                playing: true,
             },
             Goose,
             RoundComponent,

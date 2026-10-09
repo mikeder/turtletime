@@ -1,4 +1,4 @@
-use crate::menu::{connect, lobby, main, online, options, quick, ui, win};
+use crate::menu::{character, connect, lobby, main, online, options, quick, ui, win};
 use crate::AppState;
 use bevy::prelude::*;
 
@@ -11,6 +11,7 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<online::PlayerName>()
+            .init_resource::<character::SelectedCharacter>()
             // hover, press and disabled looks are the same for every menu
             .add_systems(Update, ui::update_buttons)
             // main menu
@@ -79,6 +80,14 @@ impl Plugin for MenuPlugin {
                 options::btn_listeners.run_if(in_state(AppState::MenuOptions)),
             )
             .add_systems(OnExit(AppState::MenuOptions), options::cleanup_ui)
+            // character select menu
+            .add_systems(OnEnter(AppState::MenuCharacter), character::setup_ui)
+            .add_systems(
+                Update,
+                (character::btn_listeners, character::update_selected)
+                    .run_if(in_state(AppState::MenuCharacter)),
+            )
+            .add_systems(OnExit(AppState::MenuCharacter), character::cleanup_ui)
             // win menu
             .add_systems(OnEnter(AppState::Win), win::setup_ui)
             .add_systems(Update, win::btn_listeners.run_if(in_state(AppState::Win)))
