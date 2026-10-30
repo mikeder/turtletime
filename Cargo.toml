@@ -25,7 +25,7 @@ lto = "thin"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 bevy_ggrs = { version = "0.20", features = ["wasm-bindgen"] }
 js-sys = { version = "0.3" }
-web-sys = { version = "0.3" }
+web-sys = { version = "0.3", features = ["Window", "Storage"] }
 wasm-bindgen = { version = "0.2.105" }
 wasm-bindgen-futures = { version = "0.4.55" }
 
@@ -56,6 +56,10 @@ rand = { version = "0.10", default-features = false, features = ["std"] }
 rand_pcg = { version = "0.10" }
 rand_seeder = { version = "0.5" }
 serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+base64 = { version = "0.22" }
+# http calls to the Tiny Game Platform, works the same on native and the web
+ehttp = { version = "0.7" }
 winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png"] }
 

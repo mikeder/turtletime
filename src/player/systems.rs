@@ -17,7 +17,8 @@ use super::input::{
     INPUT_SPRINT, INPUT_UP,
 };
 use super::resources::{
-    AgreedRandom, Connections, HealthBarsAdded, PreviousWinner, Spectating, DISCONNECT_NOTICE_SECS,
+    AgreedRandom, Connections, HealthBarsAdded, OnlineMatchFinished, PreviousWinner, Spectating,
+    DISCONNECT_NOTICE_SECS,
 };
 
 use crate::audio::{FadedLoopSound, RollbackSound, RollbackSoundBundle};
@@ -1277,6 +1278,7 @@ pub fn check_win_state(
     player_handle: Option<Res<LocalHandle>>,
     player_names: Option<Res<PlayerNames>>,
     connections: Res<Connections>,
+    mut finished: MessageWriter<OnlineMatchFinished>,
     player_query: Query<(Entity, &Player), Without<Fireball>>,
 ) {
     let local_handle = match player_handle {
@@ -1295,6 +1297,11 @@ pub fn check_win_state(
     }
     if remaning_active.len() == 1 {
         let winner = remaning_active[0].handle;
+        if *state.get() == AppState::RoundOnline {
+            finished.write(OnlineMatchFinished {
+                won: winner == local_handle,
+            });
+        }
         *previous_winner = if *state.get() != AppState::RoundOnline {
             PreviousWinner::Handle(winner)
         } else if winner == local_handle {

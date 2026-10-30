@@ -1,6 +1,8 @@
 use super::checksum::checksum_players;
 use super::components::EdibleSpawnTimer;
-use super::resources::{Connections, HealthBarsAdded, PlayersReady, PreviousWinner, Spectating};
+use super::resources::{
+    Connections, HealthBarsAdded, OnlineMatchFinished, PlayersReady, PreviousWinner, Spectating,
+};
 use super::round::{
     cleanup_round, cleanup_session, disconnect_remote_players, remove_expired, setup_round,
 };
@@ -19,6 +21,7 @@ impl Plugin for PlayerPlugin {
             .init_resource::<Spectating>()
             .init_resource::<Connections>()
             .init_resource::<PreviousWinner>()
+            .add_message::<OnlineMatchFinished>()
             // round setup
             .add_systems(
                 OnEnter(GameState::Playing),

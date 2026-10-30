@@ -61,3 +61,10 @@ pub enum PreviousWinner {
 #[derive(Debug, Default, Reflect, Resource)]
 #[reflect(Resource)]
 pub struct HealthBarsAdded;
+
+/// An online round ended, sent once by every player for themselves.
+#[derive(Message, Debug, Clone, Copy)]
+pub struct OnlineMatchFinished {
+    /// whether the local player won
+    pub won: bool,
+}

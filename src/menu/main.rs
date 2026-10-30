@@ -5,6 +5,7 @@ use super::plugin::VERSION;
 use super::ui::{self, MenuButton};
 use crate::graphics::{Character, CharacterSheet};
 use crate::loading::FontAssets;
+use crate::platform::plugin::{self as platform, Account, AccountStatus, Motd, PlatformRequest};
 use crate::player::input::GGRSConfig;
 use crate::player::resources::{AgreedRandom, PreviousWinner};
 use crate::{AppState, GameState, CHECK_DISTANCE, FPS, INPUT_DELAY, MAX_PREDICTION};
@@ -17,12 +18,26 @@ use ggrs::{PlayerType, SessionBuilder};
 #[derive(Component)]
 pub struct MainMenuUI;
 
+/// The message of the day box, hidden while there is none.
+#[derive(Component)]
+pub struct MotdBox;
+
+#[derive(Component)]
+pub struct MotdText;
+
+/// Says who is signed in, under the buttons.
+#[derive(Component)]
+pub struct AccountStatusText;
+
 #[derive(Component)]
 pub enum MainMenuBtn {
     OnlineMatch,
     LocalMatch,
     Character,
     Options,
+    // only shown when the game was built with a platform application id
+    Account,
+    Leaderboards,
     // not shown on the web build
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     Quit,
@@ -35,6 +50,7 @@ pub fn setup_ui(
     font_assets: Res<FontAssets>,
     player_count: Option<Res<PlayerCount>>,
     mut previous_winner: ResMut<PreviousWinner>,
+    motd: Res<Motd>,
 ) {
     // default player count
     if player_count.is_none() {
@@ -54,6 +70,25 @@ pub fn setup_ui(
         .spawn((ui::screen(), MainMenuUI))
         .with_children(|parent| {
             parent.spawn(ui::title(font, "Turtle Time!"));
+            // message of the day, shown once the platform sends one
+            parent.spawn((
+                Node {
+                    display: motd_display(&motd),
+                    max_width: Val::Px(640.),
+                    padding: UiRect::axes(Val::Px(20.), Val::Px(10.)),
+                    border: UiRect::all(Val::Px(3.)),
+                    border_radius: BorderRadius::all(Val::Px(8.)),
+                    ..Default::default()
+                },
+                BackgroundColor(ui::SHADE),
+                BorderColor::all(ui::MOSS_EDGE),
+                MotdBox,
+                children![(
+                    ui::text(font, motd.text.clone(), ui::HINT_SIZE + 2., ui::CREAM),
+                    TextLayout::new_with_justify(Justify::Center),
+                    MotdText,
+                )],
+            ));
             // logo
             parent.spawn((
                 ImageNode::from_atlas_image(
@@ -78,20 +113,42 @@ pub fn setup_ui(
                 ui::button(font, "Local match", MenuButton::Secondary),
                 MainMenuBtn::LocalMatch,
             ));
+            // the less used buttons go in pairs, so everything fits on screen
             parent.spawn((
-                ui::button(font, "Character", MenuButton::Secondary),
-                MainMenuBtn::Character,
+                ui::row(),
+                children![
+                    (
+                        ui::button(font, "Character", MenuButton::Secondary),
+                        MainMenuBtn::Character,
+                    ),
+                    (
+                        ui::button(font, "Controls", MenuButton::Secondary),
+                        MainMenuBtn::Options,
+                    ),
+                ],
             ));
-            parent.spawn((
-                ui::button(font, "Controls", MenuButton::Secondary),
-                MainMenuBtn::Options,
-            ));
+            if platform::enabled() {
+                parent.spawn((
+                    ui::row(),
+                    children![
+                        (
+                            ui::button(font, "Leaderboards", MenuButton::Secondary),
+                            MainMenuBtn::Leaderboards,
+                        ),
+                        (
+                            ui::button(font, "Sign in", MenuButton::Secondary),
+                            MainMenuBtn::Account,
+                        ),
+                    ],
+                ));
+            }
             // there is nothing to quit to in a browser, the player just closes the tab
             #[cfg(not(target_arch = "wasm32"))]
             parent.spawn((
                 ui::button(font, "Quit", MenuButton::Secondary),
                 MainMenuBtn::Quit,
             ));
+            parent.spawn((ui::hint(font, ""), AccountStatusText));
             parent.spawn(ui::hint(font, format!("Version {VERSION}")));
         });
 }
@@ -137,9 +194,83 @@ pub fn btn_listeners(
                 MainMenuBtn::Options => {
                     app_state.set(AppState::MenuOptions);
                 }
+                MainMenuBtn::Account => {
+                    app_state.set(AppState::MenuAccount);
+                }
+                MainMenuBtn::Leaderboards => {
+                    app_state.set(AppState::MenuLeaderboard);
+                }
                 MainMenuBtn::Quit => {
                     exit.write(AppExit::Success);
                 }
+            }
+        }
+    }
+}
+
+/// The MOTD is asked for whenever the main menu opens, the platform plugin makes
+/// sure that isn't too often.
+pub fn fetch_motd(mut requests: MessageWriter<PlatformRequest>) {
+    if platform::enabled() {
+        requests.write(PlatformRequest::FetchMotd);
+    }
+}
+
+fn motd_display(motd: &Motd) -> Display {
+    if motd.text.is_empty() {
+        Display::None
+    } else {
+        Display::Flex
+    }
+}
+
+/// The MOTD usually arrives after the menu is shown.
+pub fn update_motd(
+    motd: Res<Motd>,
+    mut boxes: Query<&mut Node, With<MotdBox>>,
+    mut texts: Query<&mut Text, With<MotdText>>,
+) {
+    if !motd.is_changed() {
+        return;
+    }
+    for mut node in boxes.iter_mut() {
+        node.display = motd_display(&motd);
+    }
+    for mut text in texts.iter_mut() {
+        text.0 = motd.text.clone();
+    }
+}
+
+/// A saved session is restored in the background, so the account line can change
+/// while the menu is open.
+pub fn update_account_status(
+    account: Res<Account>,
+    mut status: Query<&mut Text, With<AccountStatusText>>,
+    buttons: Query<(&MainMenuBtn, &Children)>,
+    mut labels: Query<&mut Text, Without<AccountStatusText>>,
+    new_menu: Query<(), Added<AccountStatusText>>,
+) {
+    if !account.is_changed() && new_menu.is_empty() {
+        return;
+    }
+    let (line, label) = match account.status {
+        AccountStatus::SignedIn => (format!("Signed in as {}", account.username), "Account"),
+        AccountStatus::Working => ("Signing in...".to_owned(), "Account"),
+        AccountStatus::SignedOut if platform::enabled() => {
+            ("Playing without an account".to_owned(), "Sign in")
+        }
+        AccountStatus::SignedOut => (String::new(), "Sign in"),
+    };
+    for mut text in status.iter_mut() {
+        text.0 = line.clone();
+    }
+    for (btn, children) in buttons.iter() {
+        if !matches!(btn, MainMenuBtn::Account) {
+            continue;
+        }
+        for child in children.iter() {
+            if let Ok(mut text) = labels.get_mut(child) {
+                text.0 = label.to_owned();
             }
         }
     }

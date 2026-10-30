@@ -1,5 +1,6 @@
 use super::ui::{self, MenuButton};
 use crate::loading::FontAssets;
+use crate::platform::plugin::Account;
 use crate::AppState;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input::ButtonState;
@@ -49,8 +50,17 @@ pub fn clean_name(raw: &str) -> String {
 #[derive(Component)]
 pub struct NameField;
 
-pub fn setup_ui(mut commands: Commands, font_assets: Res<FontAssets>) {
+pub fn setup_ui(
+    mut commands: Commands,
+    font_assets: Res<FontAssets>,
+    account: Res<Account>,
+    mut player_name: ResMut<PlayerName>,
+) {
     let font = &font_assets.fira_sans;
+    // signed in players show up under their account name, unless they picked another
+    if player_name.0.is_empty() && account.signed_in() {
+        player_name.0 = clean_name(&account.username);
+    }
 
     // ui camera
     commands.spawn((Camera2d, Msaa::Off)).insert(MenuOnlineUI);

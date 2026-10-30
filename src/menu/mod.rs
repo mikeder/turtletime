@@ -1,5 +1,7 @@
+pub mod account;
 pub mod character;
 pub mod connect;
+pub mod leaderboard;
 pub mod lobby;
 pub mod main;
 pub mod online;

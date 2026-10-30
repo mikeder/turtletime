@@ -7,6 +7,7 @@ mod loading;
 mod map;
 mod menu;
 pub mod npc;
+pub mod platform;
 pub mod player;
 mod rollback;
 #[cfg(test)]
@@ -23,6 +24,7 @@ use graphics::GraphicsPlugin;
 use map::tilemap::TileMapPlugin;
 use menu::plugin::MenuPlugin;
 use npc::plugin::GoosePlugin;
+use platform::plugin::PlatformPlugin;
 use player::plugin::PlayerPlugin;
 use rollback::RollbackPlugin;
 
@@ -67,6 +69,10 @@ pub enum AppState {
     MenuOptions,
     // Menu for picking the turtle to play as
     MenuCharacter,
+    // Menu for signing in to a Tiny Game Platform account
+    MenuAccount,
+    // Menu for looking at the leaderboards
+    MenuLeaderboard,
     // Game logic for online round is executed
     RoundOnline,
     // Game logic fo local round is executed
@@ -105,6 +111,7 @@ impl Plugin for GamePlugin {
                 PlayerPlugin,
                 GoosePlugin,
                 ConsolePlugin,
+                PlatformPlugin,
             ));
 
         #[cfg(debug_assertions)]

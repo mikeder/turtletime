@@ -1,4 +1,6 @@
-use crate::menu::{character, connect, lobby, main, online, options, quick, ui, win};
+use crate::menu::{
+    account, character, connect, leaderboard, lobby, main, online, options, quick, ui, win,
+};
 use crate::AppState;
 use bevy::prelude::*;
 
@@ -15,10 +17,18 @@ impl Plugin for MenuPlugin {
             // hover, press and disabled looks are the same for every menu
             .add_systems(Update, ui::update_buttons)
             // main menu
-            .add_systems(OnEnter(AppState::MenuMain), main::setup_ui)
+            .add_systems(
+                OnEnter(AppState::MenuMain),
+                (main::setup_ui, main::fetch_motd),
+            )
             .add_systems(
                 Update,
-                main::btn_listeners.run_if(in_state(AppState::MenuMain)),
+                (
+                    main::btn_listeners,
+                    main::update_motd,
+                    main::update_account_status,
+                )
+                    .run_if(in_state(AppState::MenuMain)),
             )
             .add_systems(OnExit(AppState::MenuMain), main::cleanup_ui)
             //online menu
@@ -88,6 +98,32 @@ impl Plugin for MenuPlugin {
                     .run_if(in_state(AppState::MenuCharacter)),
             )
             .add_systems(OnExit(AppState::MenuCharacter), character::cleanup_ui)
+            // account menu
+            .add_systems(OnEnter(AppState::MenuAccount), account::setup_ui)
+            .add_systems(
+                Update,
+                (
+                    account::build_content,
+                    account::type_into_form,
+                    account::btn_listeners,
+                    account::update_form_display,
+                )
+                    .chain()
+                    .run_if(in_state(AppState::MenuAccount)),
+            )
+            .add_systems(OnExit(AppState::MenuAccount), account::cleanup_ui)
+            // leaderboard menu
+            .add_systems(OnEnter(AppState::MenuLeaderboard), leaderboard::setup_ui)
+            .add_systems(
+                Update,
+                (
+                    leaderboard::update_tabs,
+                    leaderboard::update_table,
+                    leaderboard::btn_listeners,
+                )
+                    .run_if(in_state(AppState::MenuLeaderboard)),
+            )
+            .add_systems(OnExit(AppState::MenuLeaderboard), leaderboard::cleanup_ui)
             // win menu
             .add_systems(OnEnter(AppState::Win), win::setup_ui)
             .add_systems(Update, win::btn_listeners.run_if(in_state(AppState::Win)))

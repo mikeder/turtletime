@@ -1,6 +1,7 @@
 use super::connect::ConnectData;
 use super::ui::{self, MenuButton};
 use crate::loading::FontAssets;
+use crate::platform::plugin::{self as platform, Account};
 use crate::AppState;
 use bevy::prelude::*;
 
@@ -28,6 +29,7 @@ pub fn setup_ui(
     match_data: Res<MatchData>,
     font_assets: Res<FontAssets>,
     connect_data: Option<Res<ConnectData>>,
+    account: Res<Account>,
 ) {
     let font = &font_assets.fira_sans;
 
@@ -52,6 +54,17 @@ pub fn setup_ui(
                     format!("{name} disconnected"),
                     ui::BODY_SIZE,
                     ui::CHILI,
+                ));
+            }
+            // only online matches count toward the stats of an account
+            if connect_data.is_some() && platform::enabled() {
+                parent.spawn(ui::hint(
+                    font,
+                    if account.signed_in() {
+                        format!("Added to the stats of {}", account.username)
+                    } else {
+                        "Sign in to put your wins on the leaderboards".to_owned()
+                    },
                 ));
             }
             parent.spawn(ui::spacer(10.));
